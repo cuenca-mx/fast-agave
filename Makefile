@@ -23,7 +23,7 @@ install-test: install
 
 .PHONY: test
 test: clean install-test lint
-	python setup.py test
+	pytest
 
 .PHONY: format
 format:
