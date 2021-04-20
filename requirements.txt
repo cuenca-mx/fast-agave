@@ -1,2 +1,2 @@
 fastapi==0.63.0
--e ../agave[mongo]
+agave[mongo]==0.1.7.dev0
