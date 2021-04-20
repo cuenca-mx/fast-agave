@@ -1,8 +1,5 @@
-from typing import Any
-
 from agave.models import BaseModel
-from cuenca_validations.types import QueryParams
-from mongoengine import Document, Q, QuerySet
+from mongoengine import Document, QuerySet
 
 from ..lib.utils import create_awaitable
 
@@ -14,7 +11,7 @@ class AsyncQuerySet(QuerySet):
     async def async_count(self, with_limit_and_skip=False):
         return await create_awaitable(self.count, with_limit_and_skip)
 
-    async def get_items(self):
+    async def async_to_list(self):
         return await create_awaitable(list, self)
 
 

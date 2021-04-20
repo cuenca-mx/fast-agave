@@ -194,13 +194,15 @@ class RestApiBlueprint(APIRouter):
                     .filter(filters)
                     .limit(limit)
                 )
-                items = await query_set.get_items()
+                items = await query_set.async_to_list()
                 item_dicts = [i.to_dict() for i in items]
 
                 has_more: Optional[bool] = None
                 if wants_more := query.limit is None or query.limit > 0:
                     # only perform this query if it's necessary
-                    has_more = await query_set.limit(limit + 1).async_count() > limit
+                    has_more = (
+                        await query_set.limit(limit + 1).async_count() > limit
+                    )
 
                 next_page_uri: Optional[str] = None
                 if wants_more and has_more:
