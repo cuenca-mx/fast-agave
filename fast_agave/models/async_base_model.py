@@ -11,8 +11,8 @@ class AsyncBaseModel(BaseModel, Document):
     meta = dict(allow_inheritance=True)
 
     @classmethod
-    async def retrieve(cls, resource_id: str) -> Any:
-        return await create_awaitable(cls.objects.get, id=resource_id)
+    async def retrieve(cls, filters: Q) -> Any:
+        return await create_awaitable(cls.objects.get, filters)
 
     @classmethod
     async def count(cls, filters: Q) -> int:
