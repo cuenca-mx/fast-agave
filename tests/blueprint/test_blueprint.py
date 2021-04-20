@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 import pytest
 from fastapi.testclient import TestClient
 
-from examples.models import Account, Card
+from examples.models import Account, Card, File
 
 USER_ID_FILTER_REQUIRED = (
     'examples.blueprints.authed.AuthedBlueprint.user_id_filter_required'
@@ -46,13 +46,13 @@ def test_retrieve_resource_not_found(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
-# def test_update_resource_with_invalid_params(client: TestClient) -> None:
-#     wrong_params = dict(wrong_param='wrong_value')
-#     response = client.patch(
-#         '/accounts/NOT_EXISTS',
-#         json=wrong_params,
-#     )
-#     assert response.status_code == 400
+def test_update_resource_with_invalid_params(client: TestClient) -> None:
+    wrong_params = dict(wrong_param='wrong_value')
+    response = client.patch(
+        '/accounts/NOT_EXISTS',
+        json=wrong_params,
+    )
+    assert response.status_code == 400
 
 
 def test_retrieve_custom_method(client: TestClient, card: Card) -> None:
@@ -61,23 +61,23 @@ def test_retrieve_custom_method(client: TestClient, card: Card) -> None:
     assert resp.json()['number'] == '*' * 16
 
 
-# def test_update_resource_that_doesnt_exist(client: TestClient) -> None:
-#     resp = client.patch(
-#         '/accounts/5f9b4d0ff8d7255e3cc3c128',
-#         json=dict(name='Frida'),
-#     )
-#     assert resp.status_code == 404
+def test_update_resource_that_doesnt_exist(client: TestClient) -> None:
+    resp = client.patch(
+        '/accounts/5f9b4d0ff8d7255e3cc3c128',
+        json=dict(name='Frida'),
+    )
+    assert resp.status_code == 404
 
 
-# def test_update_resource(client: TestClient, account: Account) -> None:
-#     resp = client.patch(
-#         f'/accounts/{account.id}',
-#         json=dict(name='Maria Felix'),
-#     )
-#     account.reload()
-#     assert resp.json_body['name'] == 'Maria Felix'
-#     assert account.name == 'Maria Felix'
-#     assert resp.status_code == 200
+def test_update_resource(client: TestClient, account: Account) -> None:
+    resp = client.patch(
+        f'/accounts/{account.id}',
+        json=dict(name='Maria Felix'),
+    )
+    account.reload()
+    assert resp.json()['name'] == 'Maria Felix'
+    assert account.name == 'Maria Felix'
+    assert resp.status_code == 200
 
 
 def test_delete_resource(client: TestClient, account: Account) -> None:
@@ -176,8 +176,8 @@ def test_cannot_delete_resource(client: TestClient) -> None:
     assert resp.status_code == 405
 
 
-# def test_download_resource(client: TestClient, file: File) -> None:
-#     mimetype = 'application/pdf'
-#     resp = client.get(f'/files/{file.id}', headers={'Accept': mimetype})
-#     assert resp.status_code == 200
-#     assert resp.headers.get('Content-Type') == mimetype
+def test_download_resource(client: TestClient, file: File) -> None:
+    mimetype = 'application/pdf'
+    resp = client.get(f'/files/{file.id}', headers={'Accept': mimetype})
+    assert resp.status_code == 200
+    assert resp.headers.get('Content-Type') == mimetype

@@ -43,4 +43,4 @@ class Account:
 
         account.deactivated_at = dt.datetime.utcnow().replace(microsecond=0)
         account.save()
-        return Response(account.to_dict(), status_code=200)
+        return Response(content=account.to_dict(), status_code=200)

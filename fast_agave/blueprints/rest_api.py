@@ -5,7 +5,7 @@ from urllib.parse import urlencode
 from agave.blueprints.decorators import copy_attributes
 from cuenca_validations.types import QueryParams
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse as Response
+from fastapi.responses import JSONResponse as Response, StreamingResponse
 from mongoengine import DoesNotExist, Q
 from pydantic import ValidationError
 
@@ -78,8 +78,8 @@ class RestApiBlueprint(APIRouter):
                 route = self.patch(path + '/{id}')
 
                 @copy_attributes(cls)
-                async def update(id: str):
-                    params = self.current_request.json_body or dict()
+                async def update(id: str, request: Request):
+                    params = await request.json()
                     try:
                         data = cls.update_validator(**params)
                         model = cls.model.objects.get(id=id)
@@ -88,13 +88,13 @@ class RestApiBlueprint(APIRouter):
                     except DoesNotExist:
                         raise NotFoundError
                     else:
-                        return cls.update(model, data)
+                        return await cls.update(model, data)
 
                 route(update)
 
             @self.get(path + '/{id}')
             @copy_attributes(cls)
-            async def retrieve(id: str):
+            async def retrieve(id: str, request: Request):
                 """GET /resource/{id}
                 :param id: Object Id
                 :return: Model object
@@ -117,22 +117,20 @@ class RestApiBlueprint(APIRouter):
                 # This case is when the return is not an application/$
                 # but can be some type of file such as image, xml, zip or pdf
                 if hasattr(cls, 'download'):
-                    file = cls.download(data)
-                    mimetype = self.current_request.headers.get('accept')
+                    file = await cls.download(data)
+                    mimetype = request.headers['accept']
                     extension = mimetypes.guess_extension(mimetype)
                     filename = f'{cls.model._class_name}.{extension}'
-                    result = Response(
-                        body=file.read(),
+                    result = StreamingResponse(
+                        file,
+                        media_type=mimetype,
                         headers={
-                            'Content-Type': mimetype,
-                            'Content-Disposition': (
-                                'attachment; ' f'filename={filename}'
-                            ),
+                            # 'Content-Type': mimetype,
+                            'Content-Disposition': f'attachment; filename={filename}'
                         },
-                        status_code=200,
                     )
                 elif hasattr(cls, 'retrieve'):
-                    result = cls.retrieve(data)
+                    result = await cls.retrieve(data)
                 else:
                     result = data.to_dict()
 
@@ -168,20 +166,20 @@ class RestApiBlueprint(APIRouter):
                     query_params.user_id = self.current_user_id
                 filters = cls.get_query_filter(query_params)
                 if query_params.count:
-                    result = _count(filters)
+                    result = await _count(filters)
                 elif hasattr(cls, 'query'):
-                    result = cls.query(
-                        _all(query_params, filters, request.url.path)
+                    result = await cls.query(
+                        await _all(query_params, filters, request.url.path)
                     )
                 else:
-                    result = _all(query_params, filters, request.url.path)
+                    result = await _all(query_params, filters, request.url.path)
                 return result
 
-            def _count(filters: Q):
+            async def _count(filters: Q):
                 count = cls.model.objects.filter(filters).count()
                 return dict(count=count)
 
-            def _all(query: QueryParams, filters: Q, resource_path: str):
+            async def _all(query: QueryParams, filters: Q, resource_path: str):
                 if query.limit:
                     limit = min(query.limit, query.page_size)
                     query.limit = max(0, query.limit - limit)  # type: ignore

@@ -16,13 +16,13 @@ class Card:
     get_query_filter = generic_query
 
     @staticmethod
-    def retrieve(card: CardModel) -> Response:
+    async def retrieve(card: CardModel) -> Response:
         data = card.to_dict()
         data['number'] = '*' * 16
         return Response(content=data)
 
     @staticmethod
-    def query(response: Dict):
+    async def query(response: Dict):
         for item in response['items']:
             item['number'] = '*' * 16
         return response

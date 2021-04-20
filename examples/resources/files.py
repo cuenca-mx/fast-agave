@@ -14,5 +14,5 @@ class File:
     get_query_filter = generic_query
 
     @classmethod
-    def download(cls, data: FileModel) -> BytesIO:
+    async def download(cls, data: FileModel) -> BytesIO:
         return BytesIO(bytes('Hello', 'utf-8'))
