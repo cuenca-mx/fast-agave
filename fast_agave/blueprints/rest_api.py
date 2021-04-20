@@ -83,7 +83,7 @@ class RestApiBlueprint(APIRouter):
                     params = await request.json()
                     try:
                         data = cls.update_validator(**params)
-                        model = await cls.model.retrieve(Q(id=id))
+                        model = await cls.model.objects.async_get(id=id)
                     except ValidationError as e:
                         return Response(content=e.json(), status_code=400)
                     except DoesNotExist:
@@ -111,7 +111,7 @@ class RestApiBlueprint(APIRouter):
                     id_query = Q(id=id)
                     if self.user_id_filter_required():
                         id_query = id_query & Q(user_id=self.current_user_id)
-                    data = await cls.model.retrieve(id_query)
+                    data = await cls.model.objects.async_get(id_query)
                 except DoesNotExist:
                     raise NotFoundError
 
@@ -180,7 +180,7 @@ class RestApiBlueprint(APIRouter):
                 return result
 
             async def _count(filters: Q):
-                count = await cls.model.count(filters)
+                count = await cls.model.objects.filter(filters).async_count()
                 return dict(count=count)
 
             async def _all(query: QueryParams, filters: Q, resource_path: str):
@@ -189,17 +189,18 @@ class RestApiBlueprint(APIRouter):
                     query.limit = max(0, query.limit - limit)  # type: ignore
                 else:
                     limit = query.page_size
-                items = (
+                query_set = (
                     cls.model.objects.order_by("-created_at")
                     .filter(filters)
                     .limit(limit)
                 )
+                items = await query_set.get_items()
                 item_dicts = [i.to_dict() for i in items]
 
                 has_more: Optional[bool] = None
                 if wants_more := query.limit is None or query.limit > 0:
                     # only perform this query if it's necessary
-                    has_more = items.limit(limit + 1).count() > limit
+                    has_more = await query_set.limit(limit + 1).async_count() > limit
 
                 next_page_uri: Optional[str] = None
                 if wants_more and has_more:
