@@ -5,7 +5,8 @@ from urllib.parse import urlencode
 from agave.blueprints.decorators import copy_attributes
 from cuenca_validations.types import QueryParams
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse as Response, StreamingResponse
+from fastapi.responses import JSONResponse as Response
+from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
 from pydantic import ValidationError
 
@@ -172,7 +173,9 @@ class RestApiBlueprint(APIRouter):
                         await _all(query_params, filters, request.url.path)
                     )
                 else:
-                    result = await _all(query_params, filters, request.url.path)
+                    result = await _all(
+                        query_params, filters, request.url.path
+                    )
                 return result
 
             async def _count(filters: Q):
