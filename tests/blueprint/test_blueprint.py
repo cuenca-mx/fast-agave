@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 import pytest
 from fastapi.testclient import TestClient
 
-from examples.models import Account, Card, File
+from examples.models import Account, Card
 
 USER_ID_FILTER_REQUIRED = (
     'examples.blueprints.authed.AuthedBlueprint.user_id_filter_required'
