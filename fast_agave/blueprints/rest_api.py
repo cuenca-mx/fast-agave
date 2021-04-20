@@ -83,7 +83,7 @@ class RestApiBlueprint(APIRouter):
                     params = await request.json()
                     try:
                         data = cls.update_validator(**params)
-                        model = cls.model.objects.get(id=id)
+                        model = await cls.model.retrieve(id)
                     except ValidationError as e:
                         return Response(content=e.json(), status_code=400)
                     except DoesNotExist:
@@ -111,7 +111,7 @@ class RestApiBlueprint(APIRouter):
                     id_query = Q(id=id)
                     if self.user_id_filter_required():
                         id_query = id_query & Q(user_id=self.current_user_id)
-                    data = cls.model.objects.get(id_query)
+                    data = await cls.model.retrieve(id)
                 except DoesNotExist:
                     raise NotFoundError
 
@@ -150,6 +150,7 @@ class RestApiBlueprint(APIRouter):
                 If param "count" is True return the next response
                 {
                     count:<count>
+
                 }
 
                 else the response is like this
@@ -179,7 +180,7 @@ class RestApiBlueprint(APIRouter):
                 return result
 
             async def _count(filters: Q):
-                count = cls.model.objects.filter(filters).count()
+                count = await cls.model.count(filters)
                 return dict(count=count)
 
             async def _all(query: QueryParams, filters: Q, resource_path: str):

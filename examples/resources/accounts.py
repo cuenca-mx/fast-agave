@@ -23,7 +23,7 @@ class Account:
             name=request.name,
             user_id=app.current_user_id,
         )
-        account.save()
+        await account.async_save()
         return Response(content=account.to_dict(), status_code=201)
 
     @staticmethod
@@ -31,7 +31,7 @@ class Account:
         account: AccountModel, request: AccountUpdateRequest
     ) -> Response:
         account.name = request.name
-        account.save()
+        await account.async_save()
         return Response(content=account.to_dict(), status_code=200)
 
     @staticmethod
@@ -42,5 +42,5 @@ class Account:
             raise NotFoundError
 
         account.deactivated_at = dt.datetime.utcnow().replace(microsecond=0)
-        account.save()
+        await account.async_save()
         return Response(content=account.to_dict(), status_code=200)
