@@ -9,23 +9,18 @@ from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
 from pydantic import ValidationError
+from starlette_context import context
 
 from fast_agave.exc import NotFoundError
 
 
 class RestApiBlueprint(APIRouter):
     @property
-    def current_user_id(self):
-        return 'US123456789'
+    def current_user_id(self) -> str:
+        return context['user_id']
 
-    def user_id_filter_required(self):
-        """
-        This method is required to be implemented with your own business logic.
-        You are responsible of determining when `user_id` filter is required.
-        """
-        raise NotImplementedError(
-            'this method should be override'
-        )  # pragma: no cover
+    def user_id_filter_required(self) -> bool:
+        return context['user_id_filter_required']
 
     def resource(self, path: str):
         """Decorator to transform a class in Chalice REST endpoints

@@ -37,7 +37,7 @@ class Account:
     @staticmethod
     async def delete(id: str) -> Response:
         try:
-            account = AccountModel.objects.get(id=id)
+            account = await AccountModel.objects.async_get(id=id)
         except DoesNotExist:
             raise NotFoundError
 

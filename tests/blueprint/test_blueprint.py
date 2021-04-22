@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from examples.models import Account, Card, File
 
 USER_ID_FILTER_REQUIRED = (
-    'examples.blueprints.authed.AuthedBlueprint.user_id_filter_required'
+    'examples.middlewares.AuthedMiddleware.required_user_id'
 )
 
 

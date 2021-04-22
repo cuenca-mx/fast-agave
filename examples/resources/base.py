@@ -1,8 +1,8 @@
 from typing import Dict
 
-from ..blueprints import AuthedRestApiBlueprint
+from fast_agave.blueprints import RestApiBlueprint
 
-app = AuthedRestApiBlueprint()
+app = RestApiBlueprint()
 
 
 @app.get('/healthy_auth')
