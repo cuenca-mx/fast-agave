@@ -1,5 +1,5 @@
 import mimetypes
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlencode
 
 from agave.blueprints.decorators import copy_attributes
@@ -22,8 +22,20 @@ class RestApiBlueprint(APIRouter):
     def user_id_filter_required(self) -> bool:
         return context['user_id_filter_required']
 
+    async def retrieve_object(
+        self, resource_class: Any, resource_id: str
+    ) -> Any:
+        query = Q(id=resource_id)
+        if self.user_id_filter_required():
+            query = query & Q(user_id=self.current_user_id)
+        try:
+            data = await resource_class.model.objects.async_get(query)
+        except DoesNotExist:
+            raise NotFoundError
+        return data
+
     def resource(self, path: str):
-        """Decorator to transform a class in Chalice REST endpoints
+        """Decorator to transform a class in FastApi REST endpoints
 
         @app.resource('/my_resource')
         class Items(Resource):
@@ -51,19 +63,22 @@ class RestApiBlueprint(APIRouter):
             """
 
             """ POST /resource
-            Create a chalice endpoint using the method "create"
-            If the method receive body params decorate it with @validate
+            Create a FastApi endpoint using the method "create"
             """
             if hasattr(cls, 'create'):
                 route = self.post(path)
                 route(cls.create)
 
             """ DELETE /resource/{id}
-            Use "delete" method (if exists) to create the chalice endpoint
+            Use "delete" method (if exists) to create the FastApi endpoint
             """
             if hasattr(cls, 'delete'):
-                route = self.delete(path + '/{id}')
-                route(cls.delete)
+
+                @self.delete(path + '/{id}')
+                @copy_attributes(cls)
+                async def delete(id: str):
+                    obj = await self.retrieve_object(cls, id)
+                    return await cls.delete(obj)
 
             """ PATCH /resource/{id}
             Enable PATCH method if Resource.update method exist. It validates
@@ -71,20 +86,18 @@ class RestApiBlueprint(APIRouter):
             completely your responsibility.
             """
             if hasattr(cls, 'update'):
-                route = self.patch(path + '/{id}')
 
+                @self.patch(path + '/{id}')
                 @copy_attributes(cls)
                 async def update(id: str, request: Request):
                     params = await request.json()
                     try:
-                        data = cls.update_validator(**params)
-                        model = await cls.model.objects.async_get(id=id)
-                    except ValidationError as e:
-                        return Response(content=e.json(), status_code=400)
-                    except DoesNotExist:
-                        raise NotFoundError
-                    else:
-                        return await cls.update(model, data)
+                        update_params = cls.update_validator(**params)
+                    except ValidationError as exc:
+                        return Response(content=exc.json(), status_code=400)
+
+                    obj = await self.retrieve_object(cls, id)
+                    return await cls.update(obj, update_params)
 
                 route(update)
 
@@ -102,18 +115,12 @@ class RestApiBlueprint(APIRouter):
                 The most of times this implementation is enough and is not
                 necessary define a custom "retrieve" method
                 """
-                try:
-                    id_query = Q(id=id)
-                    if self.user_id_filter_required():
-                        id_query = id_query & Q(user_id=self.current_user_id)
-                    data = await cls.model.objects.async_get(id_query)
-                except DoesNotExist:
-                    raise NotFoundError
+                obj = await self.retrieve_object(cls, id)
 
                 # This case is when the return is not an application/$
                 # but can be some type of file such as image, xml, zip or pdf
                 if hasattr(cls, 'download'):
-                    file = await cls.download(data)
+                    file = await cls.download(obj)
                     mimetype = request.headers['accept']
                     extension = mimetypes.guess_extension(mimetype)
                     filename = f'{cls.model._class_name}.{extension}'
@@ -121,14 +128,13 @@ class RestApiBlueprint(APIRouter):
                         file,
                         media_type=mimetype,
                         headers={
-                            # 'Content-Type': mimetype,
                             'Content-Disposition': f'attachment; filename={filename}'
                         },
                     )
                 elif hasattr(cls, 'retrieve'):
-                    result = await cls.retrieve(data)
+                    result = await cls.retrieve(obj)
                 else:
-                    result = data.to_dict()
+                    result = obj.to_dict()
 
                 return result
 
@@ -181,7 +187,7 @@ class RestApiBlueprint(APIRouter):
             async def _all(query: QueryParams, filters: Q, resource_path: str):
                 if query.limit:
                     limit = min(query.limit, query.page_size)
-                    query.limit = max(0, query.limit - limit)  # type: ignore
+                    query.limit = max(0, query.limit - limit)
                 else:
                     limit = query.page_size
                 query_set = (

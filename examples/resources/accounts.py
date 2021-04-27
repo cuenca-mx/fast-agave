@@ -35,12 +35,7 @@ class Account:
         return Response(content=account.to_dict(), status_code=200)
 
     @staticmethod
-    async def delete(id: str) -> Response:
-        try:
-            account = await AccountModel.objects.async_get(id=id)
-        except DoesNotExist:
-            raise NotFoundError
-
+    async def delete(account: AccountModel) -> Response:
         account.deactivated_at = dt.datetime.utcnow().replace(microsecond=0)
         await account.async_save()
         return Response(content=account.to_dict(), status_code=200)
