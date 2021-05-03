@@ -3,7 +3,7 @@ from typing import Any, Optional
 from urllib.parse import urlencode
 
 from cuenca_validations.types import QueryParams
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
@@ -160,11 +160,10 @@ class RestApiBlueprint(APIRouter):
                     next_page = <url_for_next_items>
                 }
                 """
-                try:
-                    assert hasattr(cls, 'query_validator')
-                    assert hasattr(cls, 'get_query_filter')
-                except AssertionError:
-                    return Response(content=dict(), status_code=405)
+                if not hasattr(cls, 'query_validator') or not hasattr(
+                    cls, 'get_query_filter'
+                ):
+                    raise HTTPException(405)
 
                 try:
                     query_params = cls.query_validator(**request.query_params)

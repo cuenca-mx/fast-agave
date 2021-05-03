@@ -1,3 +1,4 @@
+import datetime as dt
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlencode
 
@@ -118,6 +119,15 @@ def test_query_all_resource(client: TestClient) -> None:
     assert len(json_body['items']) == 2
 
     resp = client.get(json_body['next_page_uri'])
+    assert resp.status_code == 200
+    assert len(json_body['items']) == 2
+
+
+@pytest.mark.usefixtures('accounts')
+def test_query_all_created_after(client: TestClient) -> None:
+    query_params = dict(created_after=dt.datetime(2020, 2, 1).isoformat())
+    resp = client.get(f'/accounts?{urlencode(query_params)}')
+    json_body = resp.json()
     assert resp.status_code == 200
     assert len(json_body['items']) == 2
 
