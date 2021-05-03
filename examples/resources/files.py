@@ -1,6 +1,7 @@
 from io import BytesIO
 
-from ..filters import generic_query
+from fast_agave.filters import generic_query
+
 from ..models import File as FileModel
 from ..validators import FileQuery
 from .base import app

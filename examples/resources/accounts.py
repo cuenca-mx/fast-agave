@@ -2,7 +2,7 @@ import datetime as dt
 
 from fastapi.responses import JSONResponse as Response
 
-from ..filters import generic_query
+from fast_agave.filters import generic_query
 from ..models import Account as AccountModel
 from ..validators import AccountQuery, AccountRequest, AccountUpdateRequest
 from .base import app

@@ -15,7 +15,9 @@ class AuthedMiddleware(ContextMiddleware):
         return False
 
     async def authenticate(self):
-        self.token = _request_scope_context_storage.set(dict(user_id='US123456789'))
+        self.token = _request_scope_context_storage.set(
+            dict(user_id='US123456789')
+        )
 
     async def authorize(self):
         context = _request_scope_context_storage.get()
