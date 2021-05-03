@@ -2,8 +2,7 @@ from typing import Dict
 
 from fastapi.responses import JSONResponse as Response
 
-from agave.filters import generic_query
-
+from ..filters import generic_query
 from ..models import Card as CardModel
 from ..validators import CardQuery
 from .base import app

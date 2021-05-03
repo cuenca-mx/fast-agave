@@ -161,6 +161,14 @@ def test_query_custom_method(client: TestClient) -> None:
     assert all(card['number'] == '*' * 16 for card in json_body['items'])
 
 
+def test_cannot_query_resource(client: TestClient) -> None:
+    query_params = dict(count=1, name='Frida Kahlo')
+    response = client.get(
+        f'/transactions?{urlencode(query_params)}',
+    )
+    assert response.status_code == 405
+
+
 def test_cannot_create_resource(client: TestClient) -> None:
     response = client.post('/transactions', json=dict())
     assert response.status_code == 405
