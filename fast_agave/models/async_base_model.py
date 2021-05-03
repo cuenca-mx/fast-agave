@@ -1,5 +1,5 @@
-from agave.models import BaseModel
 from mongoengine import Document, QuerySet
+from mongoengine_plus.models import BaseModel
 
 from ..lib.utils import create_awaitable
 

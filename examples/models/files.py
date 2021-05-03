@@ -1,6 +1,6 @@
 from mongoengine import StringField
 
-from agave.models.helpers import uuid_field
+from mongoengine_plus.models.helpers import uuid_field
 
 from fast_agave.models import AsyncBaseModel
 

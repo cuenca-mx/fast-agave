@@ -2,7 +2,6 @@ import mimetypes
 from typing import Any, Optional
 from urllib.parse import urlencode
 
-from agave.blueprints.decorators import copy_attributes
 from cuenca_validations.types import QueryParams
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse as Response
@@ -11,7 +10,8 @@ from mongoengine import DoesNotExist, Q
 from pydantic import ValidationError
 from starlette_context import context
 
-from fast_agave.exc import NotFoundError
+from ..exc import NotFoundError
+from .decorators import copy_attributes
 
 
 class RestApiBlueprint(APIRouter):
