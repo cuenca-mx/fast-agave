@@ -160,16 +160,12 @@ class RestApiBlueprint(APIRouter):
                     next_page = <url_for_next_items>
                 }
                 """
-                if not hasattr(cls, 'query_validator') or not hasattr(
-                    cls, 'get_query_filter'
-                ):
+                try:
+                    assert hasattr(cls, 'query_validator')
+                    assert hasattr(cls, 'get_query_filter')
+                except AssertionError:
                     return Response(content=dict(), status_code=405)
-                # try:
-                #     assert hasattr(cls, 'query_validator')
-                #     assert hasattr(cls, 'get_query_filter')
-                # except AssertionError:
-                #     return Response(content=dict(), status_code=422)
-                #
+
                 try:
                     query_params = cls.query_validator(**request.query_params)
                 except ValidationError as e:
