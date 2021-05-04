@@ -1,11 +1,11 @@
 from mongoengine import DateTimeField, StringField
+from mongoengine_plus.aio import AsyncDocument
+from mongoengine_plus.models import BaseModel
 
 from mongoengine_plus.models.helpers import uuid_field
 
-from fast_agave.models import AsyncBaseModel
 
-
-class Account(AsyncBaseModel):
+class Account(BaseModel, AsyncDocument):
     id = StringField(primary_key=True, default=uuid_field('AC'))
     name = StringField(required=True)
     user_id = StringField(required=True)

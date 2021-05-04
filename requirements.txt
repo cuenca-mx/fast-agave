@@ -1,4 +1,4 @@
 cuenca-validations==0.9.3
 fastapi==0.63.0
-mongoengine-plus==0.0.1
+mongoengine-plus==0.0.2
 starlette-context==0.3.1
