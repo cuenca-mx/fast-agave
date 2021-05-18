@@ -8,6 +8,7 @@ class Error(HTTPException):
     def __init__(self, detail=''):
         super().__init__(status_code=self.status_code, detail=detail)
 
+
 class BadRequestError(Error):
     status_code = 400
 
