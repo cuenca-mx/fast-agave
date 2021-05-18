@@ -31,7 +31,7 @@ class RestApiBlueprint(APIRouter):
         try:
             data = await resource_class.model.objects.async_get(query)
         except DoesNotExist:
-            raise NotFoundError
+            raise NotFoundError('Not valid id')
         return data
 
     def resource(self, path: str):
