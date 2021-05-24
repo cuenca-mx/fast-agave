@@ -86,8 +86,8 @@ class RestApiBlueprint(APIRouter):
             completely your responsibility.
             """
             if hasattr(cls, 'update'):
+                route = self.patch(path + '/{id}')
 
-                @self.patch(path + '/{id}')
                 @copy_attributes(cls)
                 async def update(id: str, request: Request):
                     params = await request.json()
