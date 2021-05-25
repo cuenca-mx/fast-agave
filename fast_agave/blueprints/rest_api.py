@@ -26,7 +26,9 @@ class RestApiBlueprint(APIRouter):
         self, resource_class: Any, resource_id: str
     ) -> Any:
         query = Q(id=resource_id)
-        if self.user_id_filter_required() and hasattr(resource_class.model, 'user_id'):
+        if self.user_id_filter_required() and hasattr(
+            resource_class.model, 'user_id'
+        ):
             query = query & Q(user_id=self.current_user_id)
         try:
             data = await resource_class.model.objects.async_get(query)
