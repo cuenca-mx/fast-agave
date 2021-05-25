@@ -73,12 +73,8 @@ class RestApiBlueprint(APIRouter):
             Use "delete" method (if exists) to create the FastApi endpoint
             """
             if hasattr(cls, 'delete'):
-
-                @self.delete(path + '/{id}')
-                @copy_attributes(cls)
-                async def delete(id: str):
-                    obj = await self.retrieve_object(cls, id)
-                    return await cls.delete(obj)
+                route = self.delete(path + '/{id}')
+                route(cls.delete)
 
             """ PATCH /resource/{id}
             Enable PATCH method if Resource.update method exist. It validates
