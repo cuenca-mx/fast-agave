@@ -25,6 +25,9 @@ class RestApiBlueprint(APIRouter):
     async def retrieve_object(
         self, resource_class: Any, resource_id: str
     ) -> Any:
+        resource_id = (
+            self.current_user_id if resource_id == 'me' else resource_id
+        )
         query = Q(id=resource_id)
         if self.user_id_filter_required() and hasattr(
             resource_class.model, 'user_id'
