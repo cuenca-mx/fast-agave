@@ -81,9 +81,9 @@ class RestApiBlueprint(APIRouter):
 
                 @self.delete(path + '/{id}')
                 @copy_attributes(cls)
-                async def delete(id: str):
+                async def delete(id: str, request: Request):
                     obj = await self.retrieve_object(cls, id)
-                    return await cls.delete(obj)
+                    return await cls.delete(obj, request)
 
             """ PATCH /resource/{id}
             Enable PATCH method if Resource.update method exist. It validates
