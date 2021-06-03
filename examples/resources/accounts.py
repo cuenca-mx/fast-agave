@@ -1,7 +1,7 @@
 import datetime as dt
 
 from fastapi.responses import JSONResponse as Response
-
+from fastapi import Request
 from fast_agave.filters import generic_query
 from ..models import Account as AccountModel
 from ..validators import AccountQuery, AccountRequest, AccountUpdateRequest
@@ -33,7 +33,7 @@ class Account:
         return Response(content=account.to_dict(), status_code=200)
 
     @staticmethod
-    async def delete(account: AccountModel) -> Response:
+    async def delete(account: AccountModel, _: Request) -> Response:
         account.deactivated_at = dt.datetime.utcnow().replace(microsecond=0)
         await account.async_save()
         return Response(content=account.to_dict(), status_code=200)
