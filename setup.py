@@ -23,7 +23,7 @@ setup(
     package_data=dict(agave=['py.typed']),
     python_requires='>=3.8',
     install_requires=[
-        'fastapi>=0.63.0,<0.66.0',
+        'fastapi>=0.63.0,<0.68.0',
     ],
     classifiers=[
         'Programming Language :: Python :: 3.8',
