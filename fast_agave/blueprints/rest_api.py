@@ -25,13 +25,18 @@ class RestApiBlueprint(APIRouter):
     async def retrieve_object(
         self, resource_class: Any, resource_id: str
     ) -> Any:
+        resource_id = (
+            self.current_user_id if resource_id == 'me' else resource_id
+        )
         query = Q(id=resource_id)
-        if self.user_id_filter_required():
+        if self.user_id_filter_required() and hasattr(
+            resource_class.model, 'user_id'
+        ):
             query = query & Q(user_id=self.current_user_id)
         try:
             data = await resource_class.model.objects.async_get(query)
         except DoesNotExist:
-            raise NotFoundError
+            raise NotFoundError('Not valid id')
         return data
 
     def resource(self, path: str):
@@ -76,9 +81,9 @@ class RestApiBlueprint(APIRouter):
 
                 @self.delete(path + '/{id}')
                 @copy_attributes(cls)
-                async def delete(id: str):
+                async def delete(id: str, request: Request):
                     obj = await self.retrieve_object(cls, id)
-                    return await cls.delete(obj)
+                    return await cls.delete(obj, request)
 
             """ PATCH /resource/{id}
             Enable PATCH method if Resource.update method exist. It validates
@@ -86,8 +91,8 @@ class RestApiBlueprint(APIRouter):
             completely your responsibility.
             """
             if hasattr(cls, 'update'):
+                route = self.patch(path + '/{id}')
 
-                @self.patch(path + '/{id}')
                 @copy_attributes(cls)
                 async def update(id: str, request: Request):
                     params = await request.json()
