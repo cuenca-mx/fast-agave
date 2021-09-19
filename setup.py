@@ -25,7 +25,7 @@ setup(
     install_requires=[
         'cuenca-validations>=0.9.4,<1.0.0',
         'fastapi>=0.63.0,<1.0.0',
-        'mongoengine-plus>=0.0.2,<1.0.0',
+        'mongoengine-plus>=0.0.2,<0.1.0',
         'starlette-context>=0.3.2,<0.4.0',
     ],
     classifiers=[
