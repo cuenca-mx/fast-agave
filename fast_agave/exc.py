@@ -23,3 +23,7 @@ class ForbiddenError(FastAgaveError):
 
 class NotFoundError(FastAgaveError):
     status_code = 404
+
+
+class FastAgaveViewError(FastAgaveError):
+    status_code = 500
