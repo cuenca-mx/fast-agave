@@ -5,7 +5,7 @@ from starlette.responses import JSONResponse
 from fast_agave.exc import FastAgaveError
 
 
-async def fast_agave_exceptions_handler(
+async def fast_agave_errors_handler(
     _: Request, exc: FastAgaveError
 ) -> JSONResponse:
     return JSONResponse(
