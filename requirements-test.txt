@@ -1,9 +1,9 @@
-black==21.5b1
+black==21.9b0
 flake8==3.8.*
 isort==5.9.*
 mock==4.0.3
 mongomock==3.23.*
-mypy==0.812
+mypy==0.910
 pytest==6.2.*
 pytest-cov==2.12.*
 pytest-vcr==1.0.*
