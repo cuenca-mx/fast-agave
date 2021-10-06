@@ -1,4 +1,6 @@
-from starlette.middleware.base import RequestResponseEndpoint
+from starlette.middleware.base import (
+    RequestResponseEndpoint,
+)
 from starlette.responses import Response
 from starlette_context.middleware import ContextMiddleware
 from starlette_context import _request_scope_context_storage
