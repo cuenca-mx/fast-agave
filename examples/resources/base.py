@@ -21,3 +21,11 @@ def raise_cuenca_errors() -> NoReturn:
 @app.get('/raise_fast_agave_errors')
 def raise_fast_agave_errors() -> NoReturn:
     raise UnauthorizedError('nice try!')
+
+
+@app.get('/you_shall_not_pass')
+def you_shall_not_pass() -> None:
+    # Este endpoint nunca será ejecutado
+    # La prueba de este endpoint hace un mock a nivel middleware
+    # para responder con un `UnauthorizedError`
+    ...

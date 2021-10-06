@@ -1,29 +1,32 @@
 from dataclasses import dataclass
 
-from fastapi import HTTPException
+
+@dataclass
+class FastAgaveError(Exception):
+    error: str
+    status_code: int
 
 
 @dataclass
-class FastAgaveError(HTTPException):
-    def __init__(self, detail=''):
-        super().__init__(status_code=self.status_code, detail=detail)
-
-
 class BadRequestError(FastAgaveError):
-    status_code = 400
+    status_code: int = 400
 
 
+@dataclass
 class UnauthorizedError(FastAgaveError):
-    status_code = 401
+    status_code: int = 401
 
 
+@dataclass
 class ForbiddenError(FastAgaveError):
-    status_code = 403
+    status_code: int = 403
 
 
+@dataclass
 class NotFoundError(FastAgaveError):
-    status_code = 404
+    status_code: int = 404
 
 
+@dataclass
 class FastAgaveViewError(FastAgaveError):
-    status_code = 500
+    status_code: int = 500
