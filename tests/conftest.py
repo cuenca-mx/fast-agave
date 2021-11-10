@@ -1,11 +1,17 @@
 import datetime as dt
-from typing import Generator, List
+import subprocess
+from functools import partial
+from typing import Dict, Generator, List
 
+import aiobotocore
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
+from aiobotocore import AioSession
 from fastapi.testclient import TestClient
 
 from examples.app import app
 from examples.models import Account, Card, File
+from fast_agave.tasks import sqs_tasks
 
 
 @pytest.fixture
@@ -115,3 +121,53 @@ def cards() -> Generator[List[Card], None, None]:
 @pytest.fixture
 def card(cards: List[Card]) -> Generator[Card, None, None]:
     yield cards[0]
+
+
+@pytest.fixture(scope='session')
+def aws_endpoint_urls() -> Generator[Dict[str, str], None, None]:
+    sqs = subprocess.Popen(['moto_server', 'sqs', '-p', '4000'])
+
+    endpoints = dict(
+        sqs='http://127.0.0.1:4000/',
+    )
+    yield endpoints
+    sqs.kill()
+
+
+@pytest.fixture(autouse=True)
+def patch_tasks_count(monkeypatch: MonkeyPatch) -> None:
+    def one_loop(*_, **__):
+        # Para pruebas solo necesitamos un ciclo
+        yield 0
+
+    monkeypatch.setattr(sqs_tasks, 'count', one_loop)
+
+
+@pytest.fixture(autouse=True)
+def patch_create_client(aws_endpoint_urls, monkeypatch: MonkeyPatch) -> None:
+    create_client = AioSession.create_client
+
+    def mock_create_client(*args, **kwargs):
+        service_name = next(a for a in args if type(a) is str)
+        kwargs['endpoint_url'] = aws_endpoint_urls[service_name]
+
+        return create_client(*args, **kwargs)
+
+    monkeypatch.setattr(AioSession, 'create_client', mock_create_client)
+
+
+@pytest.fixture
+async def sqs_client():
+    session = aiobotocore.get_session()
+    async with session.create_client('sqs', 'us-east-1') as sqs:
+        await sqs.create_queue(
+            QueueName='core.fifo', Attributes={'FifoQueue': 'true'}
+        )
+        resp = await sqs.get_queue_url(QueueName='core.fifo')
+        sqs.send_message = partial(sqs.send_message, QueueUrl=resp['QueueUrl'])
+        sqs.receive_message = partial(
+            sqs.receive_message, QueueUrl=resp['QueueUrl']
+        )
+        sqs.queue_url = resp['QueueUrl']
+        yield sqs
+        await sqs.purge_queue(QueueUrl=resp['QueueUrl'])
