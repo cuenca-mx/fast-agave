@@ -1,9 +1,11 @@
 import datetime as dt
+import os
 import subprocess
 from functools import partial
 from typing import Dict, Generator, List
 
 import aiobotocore
+import boto3
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from aiobotocore.session import AioSession
@@ -121,6 +123,16 @@ def cards() -> Generator[List[Card], None, None]:
 @pytest.fixture
 def card(cards: List[Card]) -> Generator[Card, None, None]:
     yield cards[0]
+
+
+@pytest.fixture(scope='session')
+def aws_credentials() -> None:
+    """Mocked AWS Credentials for moto."""
+    os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
+    os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
+    os.environ['AWS_SECURITY_TOKEN'] = 'testing'
+    os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
+    boto3.setup_default_session()
 
 
 @pytest.fixture(scope='session')
