@@ -6,7 +6,7 @@ from typing import Dict, Generator, List
 import aiobotocore
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
-from aiobotocore import AioSession
+from aiobotocore.session import AioSession
 from fastapi.testclient import TestClient
 
 from examples.app import app
@@ -158,7 +158,7 @@ def patch_create_client(aws_endpoint_urls, monkeypatch: MonkeyPatch) -> None:
 
 @pytest.fixture
 async def sqs_client():
-    session = aiobotocore.get_session()
+    session = aiobotocore.session.get_session()
     async with session.create_client('sqs', 'us-east-1') as sqs:
         await sqs.create_queue(
             QueueName='core.fifo', Attributes={'FifoQueue': 'true'}

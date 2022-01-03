@@ -1,4 +1,4 @@
-aiobotocore==1.4.2
+aiobotocore==2.1.0
 cuenca-validations==0.9.11
 fastapi==0.68.2
 mongoengine-plus==0.0.3

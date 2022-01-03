@@ -29,7 +29,7 @@ def task(
     def task_builder(task_func: Callable):
         @wraps(task_func)
         async def start_task(*args, **kwargs) -> None:
-            session = aiobotocore.get_session()
+            session = aiobotocore.session.get_session()
             async with session.create_client('sqs', region_name) as sqs:
                 for _ in count():
                     response = await sqs.receive_message(
