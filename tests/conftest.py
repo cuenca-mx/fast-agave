@@ -136,7 +136,7 @@ def aws_credentials() -> None:
 
 
 @pytest.fixture(scope='session')
-def aws_endpoint_urls() -> Generator[Dict[str, str], None, None]:
+def aws_endpoint_urls(aws_credentials) -> Generator[Dict[str, str], None, None]:
     sqs = subprocess.Popen(['moto_server', 'sqs', '-p', '4000'])
 
     endpoints = dict(
