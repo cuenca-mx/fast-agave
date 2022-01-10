@@ -45,12 +45,12 @@ def test_retrieve_resource_user_id_filter_required(
     assert resp.status_code == 404
 
 
-@patch(USER_ID_FILTER_REQUIRED, MagicMock(return_value=True))
-def test_retrieve_resource_user_id_filter_required(
-    client: TestClient, other_account: Account
-) -> None:
-    resp = client.get(f'/accounts/{other_account.id}')
-    assert resp.status_code == 404
+# @patch(USER_ID_FILTER_REQUIRED, MagicMock(return_value=True))
+# def test_retrieve_resource_user_id_filter_required(
+#     client: TestClient, other_account: Account
+# ) -> None:
+#     resp = client.get(f'/accounts/{other_account.id}')
+#     assert resp.status_code == 404
 
 
 def test_retrieve_resource_not_found(client: TestClient) -> None:
