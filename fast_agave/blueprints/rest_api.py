@@ -20,7 +20,7 @@ class RestApiBlueprint(APIRouter):
         return context['user_id']
 
     @property
-    def platform_id(self) -> str:
+    def current_platform_id(self) -> str:
         return context['platform_id']
 
     def user_id_filter_required(self) -> bool:
@@ -36,11 +36,10 @@ class RestApiBlueprint(APIRouter):
             self.current_user_id if resource_id == 'me' else resource_id
         )
         query = Q(id=resource_id)
-        breakpoint()
         if self.platform_id_filter_required() and hasattr(
             resource_class.model, 'platform_id'
         ):
-            query = query & Q(platform_id=self.platform_id)
+            query = query & Q(platform_id=self.current_platform_id)
 
         if self.user_id_filter_required() and hasattr(
             resource_class.model, 'user_id'
@@ -190,7 +189,7 @@ class RestApiBlueprint(APIRouter):
                     return Response(content=e.json(), status_code=400)
 
                 if self.platform_id_filter_required():
-                    query_params.platform_id = self.platform_id
+                    query_params.platform_id = self.current_platform_id
 
                 if self.user_id_filter_required():
                     query_params.user_id = self.current_user_id
