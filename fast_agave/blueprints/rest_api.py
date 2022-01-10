@@ -23,11 +23,9 @@ class RestApiBlueprint(APIRouter):
     def platform_id(self) -> str:
         return context['platform_id']
 
-    @property
     def user_id_filter_required(self) -> bool:
         return context['user_id_filter_required']
 
-    @property
     def platform_id_filter_required(self) -> bool:
         return context['platform_id_filter_required']
 
@@ -38,13 +36,13 @@ class RestApiBlueprint(APIRouter):
             self.current_user_id if resource_id == 'me' else resource_id
         )
         query = Q(id=resource_id)
-
-        if self.platform_id_filter_required and hasattr(
+        breakpoint()
+        if self.platform_id_filter_required() and hasattr(
             resource_class.model, 'platform_id'
         ):
             query = query & Q(platform_id=self.platform_id)
 
-        if self.user_id_filter_required and hasattr(
+        if self.user_id_filter_required() and hasattr(
             resource_class.model, 'user_id'
         ):
             query = query & Q(user_id=self.current_user_id)
@@ -191,10 +189,10 @@ class RestApiBlueprint(APIRouter):
                 except ValidationError as e:
                     return Response(content=e.json(), status_code=400)
 
-                if self.platform_id_filter_required:
+                if self.platform_id_filter_required():
                     query_params.platform_id = self.platform_id
 
-                if self.user_id_filter_required:
+                if self.user_id_filter_required():
                     query_params.user_id = self.current_user_id
 
                 filters = cls.get_query_filter(query_params)
@@ -239,9 +237,9 @@ class RestApiBlueprint(APIRouter):
                 if wants_more and has_more:
                     query.created_before = item_dicts[-1]['created_at']
                     params = query.dict()
-                    if self.user_id_filter_required:
+                    if self.user_id_filter_required():
                         params.pop('user_id')
-                    if self.platform_id_filter_required:
+                    if self.platform_id_filter_required():
                         params.pop('platform_id')
                     next_page_uri = f'{resource_path}?{urlencode(params)}'
                 return dict(items=item_dicts, next_page_uri=next_page_uri)
