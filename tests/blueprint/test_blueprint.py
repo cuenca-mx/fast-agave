@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 import pytest
 from fastapi.testclient import TestClient
 
+from examples.config import TEST_DEFAULT_USER_ID
 from examples.models import Account, Card, File
 
 PLATFORM_ID_FILTER_REQUIRED = (
@@ -38,6 +39,14 @@ def test_retrieve_resource(client: TestClient, account: Account) -> None:
 
 
 @patch(PLATFORM_ID_FILTER_REQUIRED, MagicMock(return_value=True))
+def test_retrieve_resource_platform_id_filter_required(
+    client: TestClient, other_account: Account
+) -> None:
+    resp = client.get(f'/accounts/{other_account.id}')
+    assert resp.status_code == 404
+
+
+@patch(USER_ID_FILTER_REQUIRED, MagicMock(return_value=True))
 def test_retrieve_resource_user_id_filter_required(
     client: TestClient, other_account: Account
 ) -> None:
@@ -45,12 +54,13 @@ def test_retrieve_resource_user_id_filter_required(
     assert resp.status_code == 404
 
 
-# @patch(USER_ID_FILTER_REQUIRED, MagicMock(return_value=True))
-# def test_retrieve_resource_user_id_filter_required(
-#     client: TestClient, other_account: Account
-# ) -> None:
-#     resp = client.get(f'/accounts/{other_account.id}')
-#     assert resp.status_code == 404
+@patch(PLATFORM_ID_FILTER_REQUIRED, MagicMock(return_value=True))
+@patch(USER_ID_FILTER_REQUIRED, MagicMock(return_value=True))
+def test_retrieve_resource_user_id_and_platform_id_filter_required(
+    client: TestClient, other_account: Account
+) -> None:
+    resp = client.get(f'/accounts/{other_account.id}')
+    assert resp.status_code == 404
 
 
 def test_retrieve_resource_not_found(client: TestClient) -> None:
@@ -151,13 +161,17 @@ def test_query_platform_id_filter_required(client: TestClient) -> None:
     json_body = resp.json()
     assert resp.status_code == 200
     assert len(json_body['items']) == 2
-    assert all(item['user_id'] == 'US123456789' for item in json_body['items'])
+    assert all(
+        item['user_id'] == TEST_DEFAULT_USER_ID for item in json_body['items']
+    )
 
     resp = client.get(json_body['next_page_uri'])
     json_body = resp.json()
     assert resp.status_code == 200
     assert len(json_body['items']) == 1
-    assert all(item['user_id'] == 'US123456789' for item in json_body['items'])
+    assert all(
+        item['user_id'] == TEST_DEFAULT_USER_ID for item in json_body['items']
+    )
 
 
 @pytest.mark.usefixtures('accounts')
@@ -168,13 +182,17 @@ def test_query_user_id_filter_required(client: TestClient) -> None:
     json_body = resp.json()
     assert resp.status_code == 200
     assert len(json_body['items']) == 2
-    assert all(item['user_id'] == 'US123456789' for item in json_body['items'])
+    assert all(
+        item['user_id'] == TEST_DEFAULT_USER_ID for item in json_body['items']
+    )
 
     resp = client.get(json_body['next_page_uri'])
     json_body = resp.json()
     assert resp.status_code == 200
     assert len(json_body['items']) == 1
-    assert all(item['user_id'] == 'US123456789' for item in json_body['items'])
+    assert all(
+        item['user_id'] == TEST_DEFAULT_USER_ID for item in json_body['items']
+    )
 
 
 def test_query_resource_with_invalid_params(client: TestClient) -> None:
