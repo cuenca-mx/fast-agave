@@ -17,25 +17,42 @@ def client() -> Generator[TestClient, None, None]:
 @pytest.fixture
 def accounts() -> Generator[List[Account], None, None]:
     user_id = 'US123456789'
+    platform_id = 'PT123456'
     accs = [
         Account(
             name='Frida Kahlo',
             user_id=user_id,
+            platform_id=platform_id,
             created_at=dt.datetime(2020, 1, 1),
         ),
         Account(
             name='Sor Juana Inés',
             user_id=user_id,
+            platform_id=platform_id,
+            created_at=dt.datetime(2020, 2, 1),
+        ),
+        Account(
+            name='Eulalia Guzmán',
+            user_id='US222222',
+            platform_id=platform_id,
+            created_at=dt.datetime(2020, 2, 1),
+        ),
+        Account(
+            name='Matilde Montoya',
+            user_id='US222222',
+            platform_id=platform_id,
             created_at=dt.datetime(2020, 2, 1),
         ),
         Account(
             name='Leona Vicario',
             user_id=user_id,
+            platform_id=platform_id,
             created_at=dt.datetime(2020, 3, 1),
         ),
         Account(
             name='Remedios Varo',
             user_id='US987654321',
+            platform_id='PT987654321',
             created_at=dt.datetime(2020, 4, 1),
         ),
     ]
