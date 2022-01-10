@@ -7,6 +7,9 @@ from fastapi.testclient import TestClient
 
 from examples.models import Account, Card, File
 
+PLATFORM_ID_FILTER_REQUIRED = (
+    'examples.middlewares.AuthedMiddleware.required_platform_id'
+)
 USER_ID_FILTER_REQUIRED = (
     'examples.middlewares.AuthedMiddleware.required_user_id'
 )
@@ -32,6 +35,14 @@ def test_retrieve_resource(client: TestClient, account: Account) -> None:
     resp = client.get(f'/accounts/{account.id}')
     assert resp.status_code == 200
     assert resp.json() == account.to_dict()
+
+
+@patch(PLATFORM_ID_FILTER_REQUIRED, MagicMock(return_value=True))
+def test_retrieve_resource_user_id_filter_required(
+    client: TestClient, other_account: Account
+) -> None:
+    resp = client.get(f'/accounts/{other_account.id}')
+    assert resp.status_code == 404
 
 
 @patch(USER_ID_FILTER_REQUIRED, MagicMock(return_value=True))
@@ -130,6 +141,23 @@ def test_query_all_created_after(client: TestClient) -> None:
     json_body = resp.json()
     assert resp.status_code == 200
     assert len(json_body['items']) == 2
+
+
+@pytest.mark.usefixtures('accounts')
+@patch(PLATFORM_ID_FILTER_REQUIRED, MagicMock(return_value=True))
+def test_query_platform_id_filter_required(client: TestClient) -> None:
+    query_params = dict(page_size=2)
+    resp = client.get(f'/accounts?{urlencode(query_params)}')
+    json_body = resp.json()
+    assert resp.status_code == 200
+    assert len(json_body['items']) == 2
+    assert all(item['user_id'] == 'US123456789' for item in json_body['items'])
+
+    resp = client.get(json_body['next_page_uri'])
+    json_body = resp.json()
+    assert resp.status_code == 200
+    assert len(json_body['items']) == 1
+    assert all(item['user_id'] == 'US123456789' for item in json_body['items'])
 
 
 @pytest.mark.usefixtures('accounts')
