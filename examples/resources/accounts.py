@@ -20,6 +20,7 @@ class Account:
         account = AccountModel(
             name=request.name,
             user_id=app.current_user_id,
+            platform_id='PT123456',
         )
         await account.async_save()
         return Response(content=account.to_dict(), status_code=201)
