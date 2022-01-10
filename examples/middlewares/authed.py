@@ -7,6 +7,11 @@ from starlette_context import _request_scope_context_storage
 
 from fastapi import Request
 
+from examples.config import (
+    TEST_DEFAULT_USER_ID,
+    TEST_DEFAULT_PLATFORM_ID,
+)
+
 
 class AuthedMiddleware(ContextMiddleware):
     def required_user_id(self) -> bool:
@@ -25,7 +30,10 @@ class AuthedMiddleware(ContextMiddleware):
 
     async def authenticate(self):
         self.token = _request_scope_context_storage.set(
-            dict(user_id='US123456789', platform_id='PT123456')
+            dict(
+                user_id=TEST_DEFAULT_USER_ID,
+                platform_id=TEST_DEFAULT_PLATFORM_ID,
+            )
         )
 
     async def authorize(self):

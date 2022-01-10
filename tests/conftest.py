@@ -5,6 +5,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from examples.app import app
+from examples.config import (
+    TEST_DEFAULT_PLATFORM_ID,
+    TEST_DEFAULT_USER_ID,
+    TEST_SECOND_PLATFORM_ID,
+    TEST_SECOND_USER_ID,
+)
 from examples.models import Account, Card, File
 
 
@@ -16,43 +22,41 @@ def client() -> Generator[TestClient, None, None]:
 
 @pytest.fixture
 def accounts() -> Generator[List[Account], None, None]:
-    user_id = 'US123456789'
-    platform_id = 'PT123456'
     accs = [
         Account(
             name='Frida Kahlo',
-            user_id=user_id,
-            platform_id=platform_id,
+            user_id=TEST_DEFAULT_USER_ID,
+            platform_id=TEST_DEFAULT_PLATFORM_ID,
             created_at=dt.datetime(2020, 1, 1),
         ),
         Account(
             name='Sor Juana Inés',
-            user_id=user_id,
-            platform_id=platform_id,
+            user_id=TEST_DEFAULT_USER_ID,
+            platform_id=TEST_DEFAULT_PLATFORM_ID,
             created_at=dt.datetime(2020, 2, 1),
         ),
         Account(
             name='Eulalia Guzmán',
             user_id='US222222',
-            platform_id=platform_id,
+            platform_id=TEST_DEFAULT_PLATFORM_ID,
             created_at=dt.datetime(2020, 2, 1),
         ),
         Account(
             name='Matilde Montoya',
             user_id='US222222',
-            platform_id=platform_id,
+            platform_id=TEST_DEFAULT_PLATFORM_ID,
             created_at=dt.datetime(2020, 2, 1),
         ),
         Account(
             name='Leona Vicario',
-            user_id=user_id,
-            platform_id=platform_id,
+            user_id=TEST_DEFAULT_USER_ID,
+            platform_id=TEST_DEFAULT_PLATFORM_ID,
             created_at=dt.datetime(2020, 3, 1),
         ),
         Account(
             name='Remedios Varo',
-            user_id='US987654321',
-            platform_id='PT987654321',
+            user_id=TEST_SECOND_USER_ID,
+            platform_id=TEST_SECOND_PLATFORM_ID,
             created_at=dt.datetime(2020, 4, 1),
         ),
     ]
@@ -76,11 +80,10 @@ def other_account(accounts: List[Account]) -> Generator[Account, None, None]:
 
 @pytest.fixture
 def files() -> Generator[List[File], None, None]:
-    user_id = 'US123456789'
     accs = [
         File(
             name='Frida Kahlo',
-            user_id=user_id,
+            user_id=TEST_DEFAULT_USER_ID,
         ),
     ]
 
@@ -98,21 +101,20 @@ def file(files: List[File]) -> Generator[File, None, None]:
 
 @pytest.fixture
 def cards() -> Generator[List[Card], None, None]:
-    user_id = 'US123456789'
     cards = [
         Card(
             number='5434000000000001',
-            user_id=user_id,
+            user_id=TEST_DEFAULT_USER_ID,
             created_at=dt.datetime(2020, 1, 1),
         ),
         Card(
             number='5434000000000002',
-            user_id=user_id,
+            user_id=TEST_DEFAULT_USER_ID,
             created_at=dt.datetime(2020, 2, 1),
         ),
         Card(
             number='5434000000000003',
-            user_id=user_id,
+            user_id=TEST_DEFAULT_USER_ID,
             created_at=dt.datetime(2020, 3, 1),
         ),
         Card(
