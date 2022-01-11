@@ -3,6 +3,7 @@ flake8==3.8.*
 isort==5.9.*
 mock==4.0.3
 mongomock==3.23.*
+moto[server]==2.2.*
 mypy==0.910
 pytest==6.2.*
 pytest-cov==3.0.*
