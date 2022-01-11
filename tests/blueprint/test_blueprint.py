@@ -1,11 +1,12 @@
 import datetime as dt
+from typing import List
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlencode
 
 import pytest
 from fastapi.testclient import TestClient
 
-from examples.config import TEST_DEFAULT_USER_ID
+from examples.config import TEST_DEFAULT_PLATFORM_ID, TEST_DEFAULT_USER_ID
 from examples.models import Account, Card, File
 
 PLATFORM_ID_FILTER_REQUIRED = (
@@ -131,68 +132,82 @@ def test_query_all_with_limit(client: TestClient) -> None:
     assert json_body['next_page_uri'] is None
 
 
-@pytest.mark.usefixtures('accounts')
-def test_query_all_resource(client: TestClient) -> None:
-    query_params = dict(page_size=2)
+def test_query_all_resource(
+    client: TestClient, accounts: List[Account]
+) -> None:
+    accounts = list(reversed(accounts))
+
+    items = []
+    page_uri = f'/accounts?{urlencode(dict(page_size=2))}'
+
+    while page_uri:
+        resp = client.get(page_uri)
+        assert resp.status_code == 200
+        json_body = resp.json()
+        items.extend(json_body['items'])
+        page_uri = json_body['next_page_uri']
+
+    assert len(items) == len(accounts)
+    assert all(a.to_dict() == b for a, b in zip(accounts, items))
+
+
+def test_query_all_created_after(
+    client: TestClient, accounts: List[Account]
+) -> None:
+    created_at = dt.datetime(2020, 2, 1)
+    expected_length = len([a for a in accounts if a.created_at > created_at])
+
+    query_params = dict(created_after=created_at.isoformat())
     resp = client.get(f'/accounts?{urlencode(query_params)}')
     json_body = resp.json()
+
     assert resp.status_code == 200
-    assert len(json_body['items']) == 2
-
-    resp = client.get(json_body['next_page_uri'])
-    assert resp.status_code == 200
-    assert len(json_body['items']) == 2
+    assert len(json_body['items']) == expected_length
 
 
-@pytest.mark.usefixtures('accounts')
-def test_query_all_created_after(client: TestClient) -> None:
-    query_params = dict(created_after=dt.datetime(2020, 2, 1).isoformat())
-    resp = client.get(f'/accounts?{urlencode(query_params)}')
-    json_body = resp.json()
-    assert resp.status_code == 200
-    assert len(json_body['items']) == 2
-
-
-@pytest.mark.usefixtures('accounts')
 @patch(PLATFORM_ID_FILTER_REQUIRED, MagicMock(return_value=True))
-def test_query_platform_id_filter_required(client: TestClient) -> None:
-    query_params = dict(page_size=2)
-    resp = client.get(f'/accounts?{urlencode(query_params)}')
-    json_body = resp.json()
-    assert resp.status_code == 200
-    assert len(json_body['items']) == 2
-    assert all(
-        item['user_id'] == TEST_DEFAULT_USER_ID for item in json_body['items']
+def test_query_platform_id_filter_required(
+    client: TestClient, accounts: List[Account]
+) -> None:
+    accounts = list(
+        reversed(
+            [a for a in accounts if a.platform_id == TEST_DEFAULT_PLATFORM_ID]
+        )
     )
 
-    resp = client.get(json_body['next_page_uri'])
-    json_body = resp.json()
-    assert resp.status_code == 200
-    assert len(json_body['items']) == 1
-    assert all(
-        item['user_id'] == TEST_DEFAULT_USER_ID for item in json_body['items']
-    )
+    items = []
+    page_uri = f'/accounts?{urlencode(dict(page_size=2))}'
+
+    while page_uri:
+        resp = client.get(page_uri)
+        assert resp.status_code == 200
+        json_body = resp.json()
+        items.extend(json_body['items'])
+        page_uri = json_body['next_page_uri']
+
+    assert len(items) == len(accounts)
+    assert all(a.to_dict() == b for a, b in zip(accounts, items))
 
 
-@pytest.mark.usefixtures('accounts')
 @patch(USER_ID_FILTER_REQUIRED, MagicMock(return_value=True))
-def test_query_user_id_filter_required(client: TestClient) -> None:
-    query_params = dict(page_size=2)
-    resp = client.get(f'/accounts?{urlencode(query_params)}')
-    json_body = resp.json()
-    assert resp.status_code == 200
-    assert len(json_body['items']) == 2
-    assert all(
-        item['user_id'] == TEST_DEFAULT_USER_ID for item in json_body['items']
+def test_query_user_id_filter_required(
+    client: TestClient, accounts: List[Account]
+) -> None:
+    accounts = list(
+        reversed([a for a in accounts if a.user_id == TEST_DEFAULT_USER_ID])
     )
+    items = []
+    page_uri = f'/accounts?{urlencode(dict(page_size=2))}'
 
-    resp = client.get(json_body['next_page_uri'])
-    json_body = resp.json()
-    assert resp.status_code == 200
-    assert len(json_body['items']) == 1
-    assert all(
-        item['user_id'] == TEST_DEFAULT_USER_ID for item in json_body['items']
-    )
+    while page_uri:
+        resp = client.get(page_uri)
+        assert resp.status_code == 200
+        json_body = resp.json()
+        items.extend(json_body['items'])
+        page_uri = json_body['next_page_uri']
+
+    assert len(items) == len(accounts)
+    assert all(a.to_dict() == b for a, b in zip(accounts, items))
 
 
 def test_query_resource_with_invalid_params(client: TestClient) -> None:
