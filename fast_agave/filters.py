@@ -15,8 +15,9 @@ def generic_query(query: QueryParams, excluded=[]) -> Q:
         'limit',
         'page_size',
         'key',
+        *excluded,
     }
-    fields = query.dict(exclude=exclude_fields.union(excluded))
+    fields = query.dict(exclude=exclude_fields)
     if 'count' in fields:
         del fields['count']
     return filters & Q(**fields)
