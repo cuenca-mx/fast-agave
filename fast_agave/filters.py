@@ -25,3 +25,7 @@ def generic_query(query: QueryParams, excluded=[]) -> Q:
 
 def no_user_id_query(query: QueryParams) -> Q:
     return generic_query(query, excluded=['user_id'])
+
+
+def identity_query(query: QueryParams) -> Q:
+    return generic_query(query, excluded=['user_id', 'platform_id'])
