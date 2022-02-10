@@ -182,16 +182,25 @@ def test_cannot_query_resource(client: TestClient) -> None:
 def test_cannot_create_resource(client: TestClient) -> None:
     response = client.post('/transactions', json=dict())
     assert response.status_code == 405
+    assert response.json() == dict(error='Method Not Allowed')
 
 
 def test_cannot_update_resource(client: TestClient) -> None:
-    response = client.post('/transactions', json=dict())
+    response = client.patch('/transactions', json=dict())
     assert response.status_code == 405
+    assert response.json() == dict(error='Method Not Allowed')
 
 
 def test_cannot_delete_resource(client: TestClient) -> None:
     resp = client.delete('/transactions/TR1234')
     assert resp.status_code == 405
+    assert resp.json() == dict(error='Method Not Allowed')
+
+
+def test_not_found(client: TestClient) -> None:
+    resp = client.get('/non-registered-endpoint')
+    assert resp.status_code == 404
+    assert resp.json() == dict(error='Not Found')
 
 
 def test_download_resource(client: TestClient, file: File) -> None:

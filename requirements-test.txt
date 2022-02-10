@@ -10,3 +10,5 @@ pytest-cov==3.0.*
 pytest-vcr==1.0.*
 pytest-asyncio==0.15.*
 requests==2.25.*
+boto3==1.20.24
+botocore==1.23.24

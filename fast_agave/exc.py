@@ -28,5 +28,10 @@ class NotFoundError(FastAgaveError):
 
 
 @dataclass
+class MethodNotAllowedError(FastAgaveError):
+    status_code: int = 405
+
+
+@dataclass
 class FastAgaveViewError(FastAgaveError):
     status_code: int = 500
