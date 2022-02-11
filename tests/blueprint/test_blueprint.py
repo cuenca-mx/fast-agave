@@ -1,4 +1,5 @@
 import datetime as dt
+from tempfile import TemporaryFile
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlencode
 
@@ -208,3 +209,13 @@ def test_download_resource(client: TestClient, file: File) -> None:
     resp = client.get(f'/files/{file.id}', headers={'Accept': mimetype})
     assert resp.status_code == 200
     assert resp.headers.get('Content-Type') == mimetype
+
+
+def test_upload_resource(client: TestClient) -> None:
+    with TemporaryFile(mode='rb') as f:
+        file_body = f.read()
+    resp = client.post('/files/US01', files=dict(file=file_body))
+    assert resp.status_code == 201
+    json = resp.json()
+    assert json['user_id'] == 'US01'
+    assert json['name'] == 'file'
