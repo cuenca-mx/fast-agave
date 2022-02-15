@@ -98,8 +98,9 @@ class RestApiBlueprint(APIRouter):
                 @copy_attributes(cls)
                 async def upload(id: str, request: Request):
                     form = await request.form()
+                    user_id = self.current_user_id if id == 'me' else id
                     file = form['file']
-                    return await cls.upload(id, file)
+                    return await cls.upload(user_id, file)
 
             """ DELETE /resource/{id}
             Use "delete" method (if exists) to create the FastApi endpoint
