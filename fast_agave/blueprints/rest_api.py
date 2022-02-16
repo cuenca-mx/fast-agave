@@ -82,11 +82,9 @@ class RestApiBlueprint(APIRouter):
                 @copy_attributes(cls)
                 async def upload(request: Request):
                     form = await request.form()
-                    user_id = (
-                        self.current_user_id
-                        if form['user_id'] == 'me'
-                        else form['user_id']
-                    )
+                    id_form = await form['user_id'].read()  # type: ignore
+                    id = id_form.decode('utf-8')
+                    user_id = self.current_user_id if id == 'me' else id
                     return await cls.upload(user_id, form['file'])
 
             """ DELETE /resource/{id}

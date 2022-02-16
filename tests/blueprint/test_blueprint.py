@@ -214,7 +214,7 @@ def test_download_resource(client: TestClient, file: File) -> None:
 def test_upload_resource(client: TestClient) -> None:
     with TemporaryFile(mode='rb') as f:
         file_body = f.read()
-    resp = client.post('/files/US01', files=dict(file=file_body))
+    resp = client.post('/files', files=dict(file=file_body, user_id='US01'))
     assert resp.status_code == 201
     json = resp.json()
     assert json['user_id'] == 'US01'
