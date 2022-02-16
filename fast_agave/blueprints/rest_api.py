@@ -69,25 +69,25 @@ class RestApiBlueprint(APIRouter):
 
             """ POST /resource
             Create a FastApi endpoint using the method "create"
+
+            OR using the method "upload" to enable POST using a
+            streaming multipart parser to receive files as form data.
             """
             if hasattr(cls, 'create'):
                 route = self.post(path)
                 route(cls.create)
+            elif hasattr(cls, 'upload'):
 
-            """ POST /resource/{id}
-            Create a FastApi endpoint using the method "upload".
-            Enables a POST method using a streaming multipart parer to
-            receive files as form data.
-            """
-            if hasattr(cls, 'upload'):
-
-                @self.post(path + '/{id}')
+                @self.post(path)
                 @copy_attributes(cls)
-                async def upload(id: str, request: Request):
+                async def upload(request: Request):
                     form = await request.form()
-                    user_id = self.current_user_id if id == 'me' else id
-                    file = form['file']
-                    return await cls.upload(user_id, file)
+                    user_id = (
+                        self.current_user_id
+                        if form['user_id'] == 'me'
+                        else form['user_id']
+                    )
+                    return await cls.upload(user_id, form['file'])
 
             """ DELETE /resource/{id}
             Use "delete" method (if exists) to create the FastApi endpoint
