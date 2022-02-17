@@ -1,6 +1,7 @@
 from typing import Optional
 
 from cuenca_validations.types import QueryParams
+from fastapi import UploadFile
 from pydantic import BaseModel
 
 
@@ -28,3 +29,7 @@ class FileQuery(QueryParams):
 
 class CardQuery(QueryParams):
     number: Optional[str] = None
+
+
+class FileUploadValidator(BaseModel):
+    file: UploadFile

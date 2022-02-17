@@ -214,8 +214,13 @@ def test_download_resource(client: TestClient, file: File) -> None:
 def test_upload_resource(client: TestClient) -> None:
     with TemporaryFile(mode='rb') as f:
         file_body = f.read()
-    resp = client.post('/files', files=dict(file=file_body, user_id='US01'))
+    resp = client.post('/files', files=dict(file=file_body))
     assert resp.status_code == 201
     json = resp.json()
-    assert json['user_id'] == 'US01'
     assert json['name'] == 'file'
+
+
+def test_upload_resource_with_invalid_form(client: TestClient) -> None:
+    wrong_form = dict(another_file=b'Whasaaaaap')
+    resp = client.post('/files', files=wrong_form)
+    assert resp.status_code == 400
