@@ -6,7 +6,11 @@ from urllib.parse import urlencode
 import pytest
 from fastapi.testclient import TestClient
 
-from examples.config import TEST_DEFAULT_PLATFORM_ID, TEST_DEFAULT_USER_ID
+from examples.config import (
+    TEST_DEFAULT_PLATFORM_ID,
+    TEST_DEFAULT_USER_ID,
+    TEST_SECOND_PLATFORM_ID,
+)
 from examples.models import Account, Card, File
 
 PLATFORM_ID_FILTER_REQUIRED = (
@@ -269,3 +273,28 @@ def test_download_resource(client: TestClient, file: File) -> None:
     resp = client.get(f'/files/{file.id}', headers={'Accept': mimetype})
     assert resp.status_code == 200
     assert resp.headers.get('Content-Type') == mimetype
+
+
+@pytest.mark.usefixtures('users')
+def test_filter_no_user_id_query(client: TestClient) -> None:
+    resp = client.get(f'/users?platform_id={TEST_DEFAULT_PLATFORM_ID}')
+    resp_json = resp.json()
+    assert resp.status_code == 200
+    assert len(resp_json['items']) == 1
+    user1 = resp_json['items'][0]
+    resp = client.get(f'/users?platform_id={TEST_SECOND_PLATFORM_ID}')
+    resp_json = resp.json()
+    assert resp.status_code == 200
+    assert len(resp_json['items']) == 1
+    user2 = resp_json['items'][0]
+    assert user1['id'] != user2['id']
+
+
+@pytest.mark.usefixtures('billers')
+def test_filter_no_user_id_and_no_platform_id_query(
+    client: TestClient,
+) -> None:
+    resp = client.get('/billers?name=ATT')
+    resp_json = resp.json()
+    assert resp.status_code == 200
+    assert len(resp_json['items']) == 1

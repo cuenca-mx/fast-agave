@@ -18,7 +18,7 @@ from examples.config import (
     TEST_SECOND_PLATFORM_ID,
     TEST_SECOND_USER_ID,
 )
-from examples.models import Account, Card, File
+from examples.models import Account, Biller, Card, File, User
 from fast_agave.tasks import sqs_tasks
 
 
@@ -142,6 +142,32 @@ def cards() -> Generator[List[Card], None, None]:
 @pytest.fixture
 def card(cards: List[Card]) -> Generator[Card, None, None]:
     yield cards[0]
+
+
+@pytest.fixture
+def users() -> Generator[List[User], None, None]:
+    users = [
+        User(name='User1', platform_id=TEST_DEFAULT_PLATFORM_ID),
+        User(name='User2', platform_id=TEST_SECOND_PLATFORM_ID),
+    ]
+    for u in users:
+        u.save()
+    yield users
+    for u in users:
+        u.delete()
+
+
+@pytest.fixture
+def billers() -> Generator[List[Biller], None, None]:
+    billers = [
+        Biller(name='Telcel'),
+        Biller(name='ATT'),
+    ]
+    for b in billers:
+        b.save()
+    yield billers
+    for b in billers:
+        b.delete()
 
 
 @pytest.fixture(scope='session')

@@ -188,10 +188,14 @@ class RestApiBlueprint(APIRouter):
                 except ValidationError as e:
                     return Response(content=e.json(), status_code=400)
 
-                if self.platform_id_filter_required():
+                if self.platform_id_filter_required() and hasattr(
+                    cls.model, 'platform_id'
+                ):
                     query_params.platform_id = self.current_platform_id
 
-                if self.user_id_filter_required():
+                if self.user_id_filter_required() and hasattr(
+                    cls.model, 'user_id'
+                ):
                     query_params.user_id = self.current_user_id
 
                 filters = cls.get_query_filter(query_params)

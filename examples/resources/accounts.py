@@ -3,7 +3,6 @@ import datetime as dt
 from fastapi.responses import JSONResponse as Response
 from fastapi import Request
 from fast_agave.filters import generic_query
-from ..config import TEST_DEFAULT_PLATFORM_ID
 from ..models import Account as AccountModel
 from ..validators import AccountQuery, AccountRequest, AccountUpdateRequest
 from .base import app
@@ -21,7 +20,7 @@ class Account:
         account = AccountModel(
             name=request.name,
             user_id=app.current_user_id,
-            platform_id=TEST_DEFAULT_PLATFORM_ID,
+            platform_id=app.current_platform_id,
         )
         await account.async_save()
         return Response(content=account.to_dict(), status_code=201)
