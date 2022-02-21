@@ -1,8 +1,9 @@
 import datetime as dt
+import functools
 import os
 import subprocess
 from functools import partial
-from typing import Dict, Generator, List
+from typing import Callable, Dict, Generator, List
 
 import aiobotocore
 import boto3
@@ -10,6 +11,7 @@ import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from aiobotocore.session import AioSession
 from fastapi.testclient import TestClient
+from mongoengine import Document
 
 from examples.app import app
 from examples.config import (
@@ -21,6 +23,23 @@ from examples.config import (
 from examples.models import Account, Biller, Card, File, User
 from fast_agave.tasks import sqs_tasks
 
+FuncDecorator = Callable[..., Generator]
+
+
+def collection_fixture(model: Document) -> Callable[..., FuncDecorator]:
+    def collection_decorator(func: Callable) -> FuncDecorator:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Generator[List, None, None]:
+            items = func(*args, **kwargs)
+            for item in items:
+                item.save()
+            yield items
+            model.objects.delete()
+
+        return wrapper
+
+    return collection_decorator
+
 
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
@@ -29,8 +48,9 @@ def client() -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def accounts() -> Generator[List[Account], None, None]:
-    accs = [
+@collection_fixture(Account)
+def accounts() -> List[Account]:
+    return [
         Account(
             name='Frida Kahlo',
             user_id=TEST_DEFAULT_USER_ID,
@@ -69,12 +89,6 @@ def accounts() -> Generator[List[Account], None, None]:
         ),
     ]
 
-    for acc in accs:
-        acc.save()
-    yield accs
-    for acc in accs:
-        acc.delete()
-
 
 @pytest.fixture
 def account(accounts: List[Account]) -> Generator[Account, None, None]:
@@ -87,19 +101,14 @@ def other_account(accounts: List[Account]) -> Generator[Account, None, None]:
 
 
 @pytest.fixture
-def files() -> Generator[List[File], None, None]:
-    accs = [
+@collection_fixture(File)
+def files() -> List[File]:
+    return [
         File(
             name='Frida Kahlo',
             user_id=TEST_DEFAULT_USER_ID,
         ),
     ]
-
-    for acc in accs:
-        acc.save()
-    yield accs
-    for acc in accs:
-        acc.delete()
 
 
 @pytest.fixture
@@ -108,8 +117,9 @@ def file(files: List[File]) -> Generator[File, None, None]:
 
 
 @pytest.fixture
-def cards() -> Generator[List[Card], None, None]:
-    cards = [
+@collection_fixture(Card)
+def cards() -> List[Card]:
+    return [
         Card(
             number='5434000000000001',
             user_id=TEST_DEFAULT_USER_ID,
@@ -132,12 +142,6 @@ def cards() -> Generator[List[Card], None, None]:
         ),
     ]
 
-    for card in cards:
-        card.save()
-    yield cards
-    for card in cards:
-        card.delete()
-
 
 @pytest.fixture
 def card(cards: List[Card]) -> Generator[Card, None, None]:
@@ -145,29 +149,21 @@ def card(cards: List[Card]) -> Generator[Card, None, None]:
 
 
 @pytest.fixture
-def users() -> Generator[List[User], None, None]:
-    users = [
+@collection_fixture(User)
+def users() -> List[User]:
+    return [
         User(name='User1', platform_id=TEST_DEFAULT_PLATFORM_ID),
         User(name='User2', platform_id=TEST_SECOND_PLATFORM_ID),
     ]
-    for u in users:
-        u.save()
-    yield users
-    for u in users:
-        u.delete()
 
 
 @pytest.fixture
-def billers() -> Generator[List[Biller], None, None]:
-    billers = [
+@collection_fixture(Biller)
+def billers() -> List[Biller]:
+    return [
         Biller(name='Telcel'),
         Biller(name='ATT'),
     ]
-    for b in billers:
-        b.save()
-    yield billers
-    for b in billers:
-        b.delete()
 
 
 @pytest.fixture(scope='session')
