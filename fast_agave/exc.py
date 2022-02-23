@@ -40,3 +40,7 @@ class ConflictError(FastAgaveError):
 @dataclass
 class FastAgaveViewError(FastAgaveError):
     status_code: int = 500
+
+
+class RetryTask(Exception):
+    ...

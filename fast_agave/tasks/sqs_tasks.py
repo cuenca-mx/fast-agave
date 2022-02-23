@@ -6,6 +6,8 @@ from typing import Callable, Coroutine
 
 import aiobotocore
 
+from ..exc import RetryTask
+
 
 async def run_task(
     coro: Coroutine,
@@ -13,11 +15,16 @@ async def run_task(
     queue_url: str,
     receipe_handle: str,
 ) -> None:
-    await coro
-    await sqs.delete_message(
-        QueueUrl=queue_url,
-        ReceiptHandle=receipe_handle,
-    )
+    try:
+        await coro
+    except RetryTask:
+        ...
+    else:
+        print('pase')
+        await sqs.delete_message(
+            QueueUrl=queue_url,
+            ReceiptHandle=receipe_handle,
+        )
 
 
 def task(
