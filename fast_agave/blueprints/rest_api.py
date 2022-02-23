@@ -3,7 +3,7 @@ from typing import Any, Optional
 from urllib.parse import urlencode
 
 from cuenca_validations.types import QueryParams
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
@@ -81,14 +81,16 @@ class RestApiBlueprint(APIRouter):
 
                 @self.post(path)
                 @copy_attributes(cls)
-                async def upload(request: Request):
+                async def upload(
+                    request: Request, background_tasks: BackgroundTasks
+                ):
                     form = await request.form()
                     try:
                         upload_params = cls.upload_validator(**form)
                     except ValidationError as exc:
                         return Response(content=exc.json(), status_code=400)
 
-                    return await cls.upload(upload_params)
+                    return await cls.upload(upload_params, background_tasks)
 
             """ DELETE /resource/{id}
             Use "delete" method (if exists) to create the FastApi endpoint
