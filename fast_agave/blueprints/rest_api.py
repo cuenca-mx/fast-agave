@@ -19,8 +19,15 @@ class RestApiBlueprint(APIRouter):
     def current_user_id(self) -> str:
         return context['user_id']
 
+    @property
+    def current_platform_id(self) -> str:
+        return context['platform_id']
+
     def user_id_filter_required(self) -> bool:
         return context['user_id_filter_required']
+
+    def platform_id_filter_required(self) -> bool:
+        return context['platform_id_filter_required']
 
     async def retrieve_object(
         self, resource_class: Any, resource_id: str
@@ -29,10 +36,16 @@ class RestApiBlueprint(APIRouter):
             self.current_user_id if resource_id == 'me' else resource_id
         )
         query = Q(id=resource_id)
+        if self.platform_id_filter_required() and hasattr(
+            resource_class.model, 'platform_id'
+        ):
+            query = query & Q(platform_id=self.current_platform_id)
+
         if self.user_id_filter_required() and hasattr(
             resource_class.model, 'user_id'
         ):
             query = query & Q(user_id=self.current_user_id)
+
         try:
             data = await resource_class.model.objects.async_get(query)
         except DoesNotExist:
@@ -175,9 +188,16 @@ class RestApiBlueprint(APIRouter):
                 except ValidationError as e:
                     return Response(content=e.json(), status_code=400)
 
-                # Set user_id request as query param
-                if self.user_id_filter_required():
+                if self.platform_id_filter_required() and hasattr(
+                    cls.model, 'platform_id'
+                ):
+                    query_params.platform_id = self.current_platform_id
+
+                if self.user_id_filter_required() and hasattr(
+                    cls.model, 'user_id'
+                ):
                     query_params.user_id = self.current_user_id
+
                 filters = cls.get_query_filter(query_params)
                 if query_params.count:
                     result = await _count(filters)
@@ -222,6 +242,8 @@ class RestApiBlueprint(APIRouter):
                     params = query.dict()
                     if self.user_id_filter_required():
                         params.pop('user_id')
+                    if self.platform_id_filter_required():
+                        params.pop('platform_id')
                     next_page_uri = f'{resource_path}?{urlencode(params)}'
                 return dict(items=item_dicts, next_page_uri=next_page_uri)
 

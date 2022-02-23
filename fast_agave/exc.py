@@ -33,5 +33,10 @@ class MethodNotAllowedError(FastAgaveError):
 
 
 @dataclass
+class ConflictError(FastAgaveError):
+    status_code: int = 409
+
+
+@dataclass
 class FastAgaveViewError(FastAgaveError):
     status_code: int = 500

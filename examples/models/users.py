@@ -1,3 +1,5 @@
+import datetime as dt
+
 from mongoengine import DateTimeField, StringField
 from mongoengine_plus.aio import AsyncDocument
 from mongoengine_plus.models import BaseModel
@@ -5,10 +7,8 @@ from mongoengine_plus.models import BaseModel
 from mongoengine_plus.models.helpers import uuid_field
 
 
-class Account(BaseModel, AsyncDocument):
-    id = StringField(primary_key=True, default=uuid_field('AC'))
+class User(BaseModel, AsyncDocument):
+    id = StringField(primary_key=True, default=uuid_field('US'))
+    created_at = DateTimeField(default=dt.datetime.utcnow)
     name = StringField(required=True)
-    user_id = StringField(required=True)
     platform_id = StringField(required=True)
-    created_at = DateTimeField()
-    deactivated_at = DateTimeField()
