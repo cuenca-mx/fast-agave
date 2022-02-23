@@ -1,6 +1,7 @@
 from io import BytesIO
 
 from fast_agave.filters import generic_query
+from fastapi import BackgroundTasks
 from fastapi.responses import JSONResponse as Response
 
 from ..models import File as FileModel
@@ -20,7 +21,9 @@ class File:
         return BytesIO(bytes('Hello', 'utf-8'))
 
     @classmethod
-    async def upload(cls, request: FileUploadValidator) -> Response:
+    async def upload(
+        cls, request: FileUploadValidator, background_tasks: BackgroundTasks
+    ) -> Response:
         request_file = request.file
         file = FileModel(name=request_file.filename, user_id='US01')
         await file.async_save()
