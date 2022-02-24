@@ -20,7 +20,6 @@ async def run_task(
     except RetryTask:
         ...
     else:
-        print('pase')
         await sqs.delete_message(
             QueueUrl=queue_url,
             ReceiptHandle=receipe_handle,
