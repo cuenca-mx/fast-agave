@@ -205,7 +205,7 @@ def test_not_found(client: TestClient) -> None:
 
 
 def test_download_resource(client: TestClient, file: File) -> None:
-    mimetype = 'application/pdf'
+    mimetype = 'application/json'
     resp = client.get(f'/files/{file.id}', headers={'Accept': mimetype})
     assert resp.status_code == 200
     assert resp.headers.get('Content-Type') == mimetype

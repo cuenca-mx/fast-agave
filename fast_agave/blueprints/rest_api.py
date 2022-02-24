@@ -146,13 +146,16 @@ class RestApiBlueprint(APIRouter):
                     file = await cls.download(obj)
                     mimetype = request.headers['accept']
                     extension = mimetypes.guess_extension(mimetype)
+                    print(extension)
                     filename = f'{cls.model._class_name}.{extension}'
+                    headers = {
+                        'Content-Disposition': f'attachment; filename={filename}'
+                    }
+                    media_type = mimetype
                     result = StreamingResponse(
                         file,
-                        media_type=mimetype,
-                        headers={
-                            'Content-Disposition': f'attachment; filename={filename}'
-                        },
+                        headers=headers if extension else None,
+                        media_type=media_type if extension else None,
                     )
                 elif hasattr(cls, 'retrieve'):
                     result = await cls.retrieve(obj)
