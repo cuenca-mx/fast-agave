@@ -3,7 +3,7 @@ from typing import Any, Optional
 from urllib.parse import urlencode
 
 from cuenca_validations.types import QueryParams
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
@@ -78,8 +78,19 @@ class RestApiBlueprint(APIRouter):
                 route = self.post(path)
                 route(cls.create)
             elif hasattr(cls, 'upload'):
-                route = self.post(path)
-                route(cls.upload)
+
+                @self.post(path)
+                @copy_attributes(cls)
+                async def upload(
+                    request: Request, background_tasks: BackgroundTasks
+                ):
+                    form = await request.form()
+                    try:
+                        upload_params = cls.upload_validator(**form)
+                    except ValidationError as exc:
+                        return Response(content=exc.json(), status_code=400)
+
+                    return await cls.upload(upload_params, background_tasks)
 
             """ DELETE /resource/{id}
             Use "delete" method (if exists) to create the FastApi endpoint
@@ -136,14 +147,12 @@ class RestApiBlueprint(APIRouter):
                     mimetype = request.headers['accept']
                     extension = mimetypes.guess_extension(mimetype)
                     filename = f'{cls.model._class_name}.{extension}'
-                    headers = {
-                        'Content-Disposition': f'attachment; filename={filename}'
-                    }
-                    media_type = mimetype
                     result = StreamingResponse(
                         file,
-                        headers=headers if extension else None,
-                        media_type=media_type if extension else None,
+                        media_type=mimetype,
+                        headers={
+                            'Content-Disposition': f'attachment; filename={filename}'
+                        },
                     )
                 elif hasattr(cls, 'retrieve'):
                     result = await cls.retrieve(obj)
