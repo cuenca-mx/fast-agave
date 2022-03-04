@@ -221,7 +221,9 @@ async def sqs_client():
         resp = await sqs.get_queue_url(QueueName='core.fifo')
         sqs.send_message = partial(sqs.send_message, QueueUrl=resp['QueueUrl'])
         sqs.receive_message = partial(
-            sqs.receive_message, QueueUrl=resp['QueueUrl']
+            sqs.receive_message,
+            QueueUrl=resp['QueueUrl'],
+            AttributeNames=['ApproximateReceiveCount'],
         )
         sqs.queue_url = resp['QueueUrl']
         yield sqs
