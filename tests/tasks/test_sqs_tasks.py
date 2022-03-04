@@ -67,7 +67,6 @@ async def test_retry_tasks(sqs_client) -> None:
     async_mock_function.assert_called_with(test_message)
     time.sleep(1)
     resp = await sqs_client.receive_message()
-    print(resp)
     assert 'Messages' in resp
     message = resp['Messages'][0]
     assert message['Attributes']['ApproximateReceiveCount'] == '2'
