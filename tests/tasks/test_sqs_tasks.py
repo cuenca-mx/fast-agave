@@ -1,4 +1,5 @@
 import json
+import time
 from unittest.mock import AsyncMock
 
 import pytest
@@ -56,7 +57,7 @@ async def test_retry_tasks(sqs_client) -> None:
     )
 
     async_mock_function = AsyncMock(side_effect=RetryTask)
-    # No escribimos un mensaje en el queue
+
     await task(
         queue_url=sqs_client.queue_url,
         region_name=CORE_QUEUE_REGION,
@@ -64,3 +65,47 @@ async def test_retry_tasks(sqs_client) -> None:
         visibility_timeout=1,
     )(async_mock_function)()
     async_mock_function.assert_called_with(test_message)
+    time.sleep(1)
+    resp = await sqs_client.receive_message()
+    print(resp)
+    assert 'Messages' in resp
+    message = resp['Messages'][0]
+    assert message['Attributes']['ApproximateReceiveCount'] == '2'
+
+
+@pytest.mark.asyncio
+async def test_retry_tasks_max_retry(sqs_client) -> None:
+    test_message = dict(id='abc123', name='fast-agave')
+
+    await sqs_client.send_message(
+        MessageBody=json.dumps(test_message),
+        MessageGroupId='1234',
+    )
+
+    async_mock_function = AsyncMock(side_effect=RetryTask)
+
+    await task(
+        queue_url=sqs_client.queue_url,
+        region_name=CORE_QUEUE_REGION,
+        wait_time_seconds=1,
+        visibility_timeout=1,
+        max_retry=2,
+    )(async_mock_function)()
+    async_mock_function.assert_called_with(test_message)
+    time.sleep(1)
+    resp = await sqs_client.receive_message()
+    assert 'Messages' in resp
+    message = resp['Messages'][0]
+    assert message['Attributes']['ApproximateReceiveCount'] == '2'
+
+    await task(
+        queue_url=sqs_client.queue_url,
+        region_name=CORE_QUEUE_REGION,
+        wait_time_seconds=1,
+        visibility_timeout=1,
+        max_retry=2,
+    )(async_mock_function)()
+    async_mock_function.assert_called_with(test_message)
+    time.sleep(1)
+    resp = await sqs_client.receive_message()
+    assert 'Messages' not in resp
