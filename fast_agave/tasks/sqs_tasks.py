@@ -17,16 +17,11 @@ async def run_task(
     message_receive_count: int,
     max_retries: int,
 ) -> None:
-    delete_message = False
+    delete_message = True
     try:
         await coro
-        delete_message = True
     except RetryTask:
         delete_message = message_receive_count >= max_retries + 1
-    except Exception:
-        delete_message = True
-        # re raise the exception in order to log it with Sentry
-        raise
     finally:
         if delete_message:
             await sqs.delete_message(
