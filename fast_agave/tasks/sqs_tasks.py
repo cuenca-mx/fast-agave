@@ -9,13 +9,6 @@ import aiobotocore
 from ..exc import RetryTask
 
 
-async def delete_message(sqs, queue_url: str, receipe_handle: str):
-    await sqs.delete_message(
-        QueueUrl=queue_url,
-        ReceiptHandle=receipe_handle,
-    )
-
-
 async def run_task(
     coro: Coroutine,
     sqs,
@@ -25,11 +18,15 @@ async def run_task(
 ) -> None:
     try:
         await coro
+        delete_task = True
     except RetryTask:
-        if last_retry:
-            await delete_message(sqs, queue_url, receipe_handle)
-    else:
-        delete_message(sqs, queue_url, receipe_handle)
+        ...
+    finally:
+        if last_retry or delete_task:
+            await sqs.delete_message(
+                QueueUrl=queue_url,
+                ReceiptHandle=receipe_handle,
+            )
 
 
 def task(
@@ -37,7 +34,7 @@ def task(
     region_name: str,
     wait_time_seconds: int = 15,
     visibility_timeout: int = 3600,
-    max_retry: int = 1,
+    max_retries: int = 1,
 ):
     def task_builder(task_func: Callable):
         @wraps(task_func)
@@ -58,7 +55,7 @@ def task(
 
                     for message in messages:
                         body = json.loads(message['Body'])
-                        last_retry = max_retry <= int(
+                        last_retry = max_retries <= int(
                             message['Attributes']['ApproximateReceiveCount']
                         )
                         asyncio.create_task(
