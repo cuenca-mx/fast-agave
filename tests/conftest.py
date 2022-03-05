@@ -192,8 +192,12 @@ def aws_endpoint_urls(
 @pytest.fixture(autouse=True)
 def patch_tasks_count(monkeypatch: MonkeyPatch) -> None:
     def one_loop(*_, **__):
-        # Para pruebas solo necesitamos un ciclo
-        yield 0
+        # Para pruebas solo unos cuantos ciclos
+        yield 1
+        yield 2
+        yield 3
+        yield 4
+        yield 5
 
     monkeypatch.setattr(sqs_tasks, 'count', one_loop)
 
