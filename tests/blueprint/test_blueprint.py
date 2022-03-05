@@ -305,7 +305,8 @@ def test_upload_resource(client: TestClient) -> None:
     with TemporaryFile(mode='rb') as f:
         file_body = f.read()
     resp = client.post(
-        '/files', files=dict(file=(None, file_body), file_name=(None, 'test_file.txt'))
+        '/files',
+        files=dict(file=(None, file_body), file_name=(None, 'test_file.txt')),
     )
     assert resp.status_code == 201
     json = resp.json()
