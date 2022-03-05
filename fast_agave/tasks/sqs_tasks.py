@@ -13,19 +13,25 @@ async def run_task(
     coro: Coroutine,
     sqs,
     queue_url: str,
-    receipe_handle: str,
-    last_retry: bool,
+    receipt_handle: str,
+    message_receive_count: int,
+    max_retries: int,
 ) -> None:
+    delete_message = False
     try:
         await coro
-        delete_task = True
+        delete_message = True
     except RetryTask:
-        ...
+        delete_message = message_receive_count >= max_retries + 1
+    except Exception:
+        delete_message = True
+        # re raise the exception in order to log it with Sentry
+        raise
     finally:
-        if last_retry or delete_task:
+        if delete_message:
             await sqs.delete_message(
                 QueueUrl=queue_url,
-                ReceiptHandle=receipe_handle,
+                ReceiptHandle=receipt_handle,
             )
 
 
@@ -55,7 +61,7 @@ def task(
 
                     for message in messages:
                         body = json.loads(message['Body'])
-                        last_retry = max_retries <= int(
+                        message_receive_count = int(
                             message['Attributes']['ApproximateReceiveCount']
                         )
                         asyncio.create_task(
@@ -64,7 +70,8 @@ def task(
                                 sqs,
                                 queue_url,
                                 message['ReceiptHandle'],
-                                last_retry,
+                                message_receive_count,
+                                max_retries,
                             )
                         )
 
