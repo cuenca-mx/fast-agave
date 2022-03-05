@@ -9,6 +9,11 @@ from ..validators import FileQuery, FileUploadValidator
 from .base import app
 
 
+def save_file_to_disk(file: bytes, name: str) -> None:
+    with open(name, 'wb') as out_file:
+        out_file.write(file)
+
+
 @app.resource('/files')
 class File:
     model = FileModel
@@ -24,7 +29,9 @@ class File:
     async def upload(
         cls, request: FileUploadValidator, background_tasks: BackgroundTasks
     ) -> Response:
-        request_file = request.file
-        file = FileModel(name=request_file.filename, user_id='US01')
+        file = request.file
+        name = request.file_name
+        background_tasks.add_task(save_file_to_disk, file=file, name=name)
+        file = FileModel(name=name, user_id='US01')
         await file.async_save()
         return Response(content=file.to_dict(), status_code=201)

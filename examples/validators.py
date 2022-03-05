@@ -1,7 +1,6 @@
 from typing import Optional
 
 from cuenca_validations.types import QueryParams
-from fastapi import UploadFile
 from pydantic import BaseModel
 
 
@@ -41,4 +40,5 @@ class CardQuery(QueryParams):
 
 
 class FileUploadValidator(BaseModel):
-    file: UploadFile
+    file: bytes
+    file_name: str
