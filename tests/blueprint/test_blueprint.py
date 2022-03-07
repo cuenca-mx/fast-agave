@@ -1,4 +1,5 @@
 import datetime as dt
+from tempfile import TemporaryFile
 from typing import List
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlencode
@@ -298,3 +299,21 @@ def test_filter_no_user_id_and_no_platform_id_query(
     resp_json = resp.json()
     assert resp.status_code == 200
     assert len(resp_json['items']) == 1
+
+
+def test_upload_resource(client: TestClient) -> None:
+    with TemporaryFile(mode='rb') as f:
+        file_body = f.read()
+    resp = client.post(
+        '/files',
+        files=dict(file=(None, file_body), file_name=(None, 'test_file.txt')),
+    )
+    assert resp.status_code == 201
+    json = resp.json()
+    assert json['name'] == 'test_file.txt'
+
+
+def test_upload_resource_with_invalid_form(client: TestClient) -> None:
+    wrong_form = dict(another_file=b'Whasaaaaap')
+    resp = client.post('/files', files=wrong_form)
+    assert resp.status_code == 400

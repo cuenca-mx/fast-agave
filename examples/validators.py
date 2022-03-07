@@ -37,3 +37,8 @@ class FileQuery(QueryParams):
 
 class CardQuery(QueryParams):
     number: Optional[str] = None
+
+
+class FileUploadValidator(BaseModel):
+    file: bytes
+    file_name: str
