@@ -6,18 +6,28 @@ from typing import Callable, Coroutine
 
 import aiobotocore
 
+from ..exc import RetryTask
+
 
 async def run_task(
     coro: Coroutine,
     sqs,
     queue_url: str,
-    receipe_handle: str,
+    receipt_handle: str,
+    message_receive_count: int,
+    max_retries: int,
 ) -> None:
-    await coro
-    await sqs.delete_message(
-        QueueUrl=queue_url,
-        ReceiptHandle=receipe_handle,
-    )
+    delete_message = True
+    try:
+        await coro
+    except RetryTask:
+        delete_message = message_receive_count >= max_retries + 1
+    finally:
+        if delete_message:
+            await sqs.delete_message(
+                QueueUrl=queue_url,
+                ReceiptHandle=receipt_handle,
+            )
 
 
 def task(
@@ -25,6 +35,7 @@ def task(
     region_name: str,
     wait_time_seconds: int = 15,
     visibility_timeout: int = 3600,
+    max_retries: int = 1,
 ):
     def task_builder(task_func: Callable):
         @wraps(task_func)
@@ -36,6 +47,7 @@ def task(
                         QueueUrl=queue_url,
                         WaitTimeSeconds=wait_time_seconds,
                         VisibilityTimeout=visibility_timeout,
+                        AttributeNames=['ApproximateReceiveCount'],
                     )
                     try:
                         messages = response['Messages']
@@ -44,12 +56,17 @@ def task(
 
                     for message in messages:
                         body = json.loads(message['Body'])
+                        message_receive_count = int(
+                            message['Attributes']['ApproximateReceiveCount']
+                        )
                         asyncio.create_task(
                             run_task(
                                 task_func(body),
                                 sqs,
                                 queue_url,
                                 message['ReceiptHandle'],
+                                message_receive_count,
+                                max_retries,
                             )
                         )
 
