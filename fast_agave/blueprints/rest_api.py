@@ -133,7 +133,11 @@ class RestApiBlueprint(APIRouter):
                         return Response(content=exc.json(), status_code=400)
 
                     obj = await self.retrieve_object(cls, id)
-                    return await cls.update(obj, update_params)
+                    try:
+
+                        return await cls.update(obj, update_params, request)
+                    except TypeError:
+                        return await cls.update(obj, update_params)
 
                 route(update)
 

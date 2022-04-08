@@ -12,3 +12,4 @@ class User(BaseModel, AsyncDocument):
     created_at = DateTimeField(default=dt.datetime.utcnow)
     name = StringField(required=True)
     platform_id = StringField(required=True)
+    ip = StringField()

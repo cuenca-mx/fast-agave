@@ -13,6 +13,7 @@ from examples.config import (
     TEST_SECOND_PLATFORM_ID,
 )
 from examples.models import Account, Card, File
+from examples.models.users import User
 
 PLATFORM_ID_FILTER_REQUIRED = (
     'examples.middlewares.AuthedMiddleware.required_platform_id'
@@ -289,6 +290,14 @@ def test_filter_no_user_id_query(client: TestClient) -> None:
     assert len(resp_json['items']) == 1
     user2 = resp_json['items'][0]
     assert user1['id'] != user2['id']
+
+
+def test_update_user_with_ip(client: TestClient, user: User) -> None:
+    resp = client.patch(f'/users/{user.id}', json={'name': 'Pedrito Sola'})
+    resp_json = resp.json()
+    assert resp.status_code == 200
+    assert resp_json['ip'] == 'testclient'
+    assert resp_json['name'] == 'Pedrito Sola'
 
 
 @pytest.mark.usefixtures('billers')
