@@ -44,6 +44,5 @@ class FileUploadValidator(BaseModel):
     file_name: str
 
 
-class UserRequest(BaseModel):
+class UserUpdateRequest(BaseModel):
     name: str
-    ip: Optional[str]
