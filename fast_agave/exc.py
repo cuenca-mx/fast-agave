@@ -38,6 +38,11 @@ class ConflictError(FastAgaveError):
 
 
 @dataclass
+class TooManyRequests(FastAgaveError):
+    status_code: int = 429
+
+
+@dataclass
 class FastAgaveViewError(FastAgaveError):
     status_code: int = 500
 

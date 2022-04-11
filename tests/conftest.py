@@ -96,6 +96,11 @@ def account(accounts: List[Account]) -> Generator[Account, None, None]:
 
 
 @pytest.fixture
+def user(users: List[User]) -> Generator[User, None, None]:
+    yield users[0]
+
+
+@pytest.fixture
 def other_account(accounts: List[Account]) -> Generator[Account, None, None]:
     yield accounts[-1]
 

@@ -27,7 +27,8 @@ class Account:
 
     @staticmethod
     async def update(
-        account: AccountModel, request: AccountUpdateRequest
+        account: AccountModel,
+        request: AccountUpdateRequest,
     ) -> Response:
         account.name = request.name
         await account.async_save()

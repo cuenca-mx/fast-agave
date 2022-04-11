@@ -42,3 +42,7 @@ class CardQuery(QueryParams):
 class FileUploadValidator(BaseModel):
     file: bytes
     file_name: str
+
+
+class UserUpdateRequest(BaseModel):
+    name: str
