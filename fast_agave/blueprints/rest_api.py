@@ -29,6 +29,14 @@ class RestApiBlueprint(APIRouter):
     def platform_id_filter_required(self) -> bool:
         return context['platform_id_filter_required']
 
+    def custom_filter_required(self, query_params: Any, model: Any) -> None:
+        """
+        Overwrite this method in order to add new context
+        based on custom filter.
+        set de value of your filter ex query_params.wallet = self.wallet
+        """
+        pass
+
     async def retrieve_object(
         self, resource_class: Any, resource_id: str
     ) -> Any:
@@ -218,6 +226,8 @@ class RestApiBlueprint(APIRouter):
                     cls.model, 'user_id'
                 ):
                     query_params.user_id = self.current_user_id
+                # Call for custom filter implemented in overwritemethod
+                self.custom_filter_required(query_params, cls.model)
 
                 filters = cls.get_query_filter(query_params)
                 if query_params.count:
