@@ -13,6 +13,22 @@ from starlette_context import context
 from ..exc import NotFoundError
 from .decorators import copy_attributes
 
+ERROR_404 = {
+    404: {
+        "description": "Item not found",
+        "content": {
+            "application/json": {
+                "examples": {
+                    "not_found": {
+                        "summary": "Not found item",
+                        "value": {"error": "Not valid id"},
+                    }
+                }
+            }
+        },
+    },
+}
+
 
 class RestApiBlueprint(APIRouter):
     @property
@@ -95,8 +111,13 @@ class RestApiBlueprint(APIRouter):
             streaming multipart parser to receive files as form data. It
             validates form data using `Resource.upload_validator`.
             """
+            response_model = getattr(cls, '_response_model', None)
             if hasattr(cls, 'create'):
-                route = self.post(path)
+                route = self.post(
+                    path,
+                    summary=f'Create {cls.__name__}',
+                    response_model=response_model,
+                )
                 route(cls.create)
             elif hasattr(cls, 'upload'):
 
@@ -118,7 +139,13 @@ class RestApiBlueprint(APIRouter):
             """
             if hasattr(cls, 'delete'):
 
-                @self.delete(path + '/{id}')
+                @self.delete(
+                    path + '/{id}',
+                    summary=f'Delete {cls.__name__}',
+                    response_model=response_model,
+                    responses={**ERROR_404},
+                    description=f'Use id param to delete the {cls.__name__} object',
+                )
                 @copy_attributes(cls)
                 async def delete(id: str, request: Request):
                     obj = await self.retrieve_object(cls, id)
@@ -130,7 +157,13 @@ class RestApiBlueprint(APIRouter):
             completely your responsibility.
             """
             if hasattr(cls, 'update'):
-                route = self.patch(path + '/{id}')
+                route = self.patch(
+                    path + '/{id}',
+                    summary=f'Update {cls.__name__}',
+                    response_model=response_model,
+                    responses={**ERROR_404},
+                    description=f'Use id param to update the {cls.__name__} object',
+                )
 
                 @copy_attributes(cls)
                 async def update(id: str, request: Request):
@@ -148,7 +181,13 @@ class RestApiBlueprint(APIRouter):
 
                 route(update)
 
-            @self.get(path + '/{id}')
+            @self.get(
+                path + '/{id}',
+                summary=f'Retrieve {cls.__name__}',
+                response_model=response_model,
+                responses={**ERROR_404},
+                description=f'Use id param to retrieve the {cls.__name__} object',
+            )
             @copy_attributes(cls)
             async def retrieve(id: str, request: Request):
                 """GET /resource/{id}
@@ -185,7 +224,20 @@ class RestApiBlueprint(APIRouter):
 
                 return result
 
-            @self.get(path)
+            """
+            class QueryResponse(BaseModel):
+                items: Optional[List[response_model]] = None
+                next_page_uri: Optional[str] = None
+                count: Optional[int] = None
+            """
+
+            @self.get(
+                path,
+                summary=f'Query {cls.__name__}',
+                # response_model=QueryResponse,
+                description=f'Method for queries in resource {cls.__name__}. '
+                f'Filter response items using query params',
+            )
             @copy_attributes(cls)
             async def query(request: Request):
                 """GET /resource
