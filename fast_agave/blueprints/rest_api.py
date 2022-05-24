@@ -1,5 +1,5 @@
 import mimetypes
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 from cuenca_validations.types import QueryParams
@@ -8,26 +8,33 @@ from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
 from pydantic import ValidationError
+from pydantic.main import BaseModel
 from starlette_context import context
 
 from ..exc import NotFoundError
 from .decorators import copy_attributes
 
-ERROR_404 = {
-    404: {
-        "description": "Item not found",
-        "content": {
-            "application/json": {
-                "examples": {
-                    "not_found": {
-                        "summary": "Not found item",
-                        "value": {"error": "Not valid id"},
-                    }
-                }
-            }
+
+def get_response(code: int, description, examples: List[Dict]):
+    examples = {f'example_{i}': ex for i, ex in enumerate(examples)}
+    return {
+        code: {
+            "description": description,
+            "content": {"application/json": {"examples": examples}},
         },
-    },
-}
+    }
+
+
+ERROR_404 = get_response(
+    404,
+    'Item not found',
+    [
+        {
+            "summary": "Not found item",
+            "value": {"error": "Not valid id"},
+        }
+    ],
+)
 
 
 class RestApiBlueprint(APIRouter):
@@ -104,6 +111,8 @@ class RestApiBlueprint(APIRouter):
             :return:
             """
 
+            response_model = getattr(cls, '_response_model', None)
+
             """ POST /resource
             Create a FastApi endpoint using the method "create"
 
@@ -111,7 +120,6 @@ class RestApiBlueprint(APIRouter):
             streaming multipart parser to receive files as form data. It
             validates form data using `Resource.upload_validator`.
             """
-            response_model = getattr(cls, '_response_model', None)
             if hasattr(cls, 'create'):
                 route = self.post(
                     path,
@@ -121,7 +129,20 @@ class RestApiBlueprint(APIRouter):
                 route(cls.create)
             elif hasattr(cls, 'upload'):
 
-                @self.post(path)
+                @self.post(
+                    path,
+                    summary=f'Upload {cls.__name__}',
+                    response_model=response_model,
+                    openapi_extra={
+                        "requestBody": {
+                            "content": {
+                                "form-data": {
+                                    "schema": cls.upload_validator.schema()
+                                }
+                            }
+                        }
+                    },
+                )
                 @copy_attributes(cls)
                 async def upload(
                     request: Request, background_tasks: BackgroundTasks
@@ -161,7 +182,6 @@ class RestApiBlueprint(APIRouter):
                     path + '/{id}',
                     summary=f'Update {cls.__name__}',
                     response_model=response_model,
-                    responses={**ERROR_404},
                     description=f'Use id param to update the {cls.__name__} object',
                 )
 
@@ -178,6 +198,11 @@ class RestApiBlueprint(APIRouter):
                         return await cls.update(obj, update_params)
 
                 route(update)
+
+            """ GET /resource/{id}
+            By default GET method only fetch object from DB.
+            If you need extra logic override "retrieve" or "download" methods
+            """
 
             @self.get(
                 path + '/{id}',
@@ -222,19 +247,55 @@ class RestApiBlueprint(APIRouter):
 
                 return result
 
+            """ GET /resource?param=value
+            Use GET method to fetch and count filtered objects using query params.
+            To Enable queries you have to define these fields in decorated class
+            "query_validator" to validate the params.
+            "get_query_filter" to provide the way that the params are used to filter data
             """
+
+            # Build dynamically types for openapi documentation
+
             class QueryResponse(BaseModel):
                 items: Optional[List[response_model]] = None
                 next_page_uri: Optional[str] = None
                 count: Optional[int] = None
-            """
+
+            QueryResponse.__name__ = f'QueryResponse{cls.__name__}'
+
+            validator = getattr(cls, 'query_validator', QueryParams)
+            query_params = [
+                {'name': key, 'in': 'path', 'schema': value}
+                for key, value in validator.schema()['properties'].items()
+            ]
+
+            examples = [
+                {
+                    "summary": "Query objects",
+                    "value": {
+                        "items": [
+                            response_model.schema().get('example')
+                            if response_model
+                            else {}
+                        ],
+                        "next_page_uri": f'{path}?param1=value1&param2=value2',
+                    },
+                },
+                {
+                    "summary": "Count objects",
+                    "description": "Sending `true` value in `count` param",
+                    "value": {"count": 1},
+                },
+            ]
 
             @self.get(
                 path,
                 summary=f'Query {cls.__name__}',
-                # response_model=QueryResponse,
+                response_model=QueryResponse,
                 description=f'Method for queries in resource {cls.__name__}. '
                 f'Filter response items using query params',
+                responses=get_response(200, 'Successful Response', examples),
+                openapi_extra={"parameters": query_params},
             )
             @copy_attributes(cls)
             async def query(request: Request):
