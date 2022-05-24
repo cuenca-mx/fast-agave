@@ -15,8 +15,8 @@ from ..exc import NotFoundError
 from .decorators import copy_attributes
 
 
-def get_response(code: int, description, examples: List[Dict]):
-    examples = {f'example_{i}': ex for i, ex in enumerate(examples)}
+def get_response(code: int, description, samples: List[Dict]):
+    examples = {f'example_{i}': ex for i, ex in enumerate(samples)}
     return {
         code: {
             "description": description,
@@ -188,7 +188,7 @@ class RestApiBlueprint(APIRouter):
                 @copy_attributes(cls)
                 async def update(
                     id: str,
-                    update_params: cls.update_validator,
+                    update_params: cls.update_validator,  # type: ignore
                     request: Request,
                 ):
                     obj = await self.retrieve_object(cls, id)
@@ -255,9 +255,8 @@ class RestApiBlueprint(APIRouter):
             """
 
             # Build dynamically types for openapi documentation
-
             class QueryResponse(BaseModel):
-                items: Optional[List[response_model]] = None
+                items: Optional[List[response_model or Any]] = None
                 next_page_uri: Optional[str] = None
                 count: Optional[int] = None
 
