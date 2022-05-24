@@ -60,6 +60,13 @@ class AccountResponse(BaseModel):
 class AccountUpdateRequest(BaseModel):
     name: str
 
+    class Config(BaseConfig):
+        schema_extra = {
+            "example": {
+                'name': 'Pancho Villa',
+            }
+        }
+
 
 class FileQuery(QueryParams):
     user_id: Optional[str] = None

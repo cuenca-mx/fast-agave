@@ -166,13 +166,11 @@ class RestApiBlueprint(APIRouter):
                 )
 
                 @copy_attributes(cls)
-                async def update(id: str, request: Request):
-                    params = await request.json()
-                    try:
-                        update_params = cls.update_validator(**params)
-                    except ValidationError as exc:
-                        return Response(content=exc.json(), status_code=400)
-
+                async def update(
+                    id: str,
+                    update_params: cls.update_validator,
+                    request: Request,
+                ):
                     obj = await self.retrieve_object(cls, id)
                     try:
                         return await cls.update(obj, update_params, request)

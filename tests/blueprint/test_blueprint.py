@@ -81,7 +81,7 @@ def test_update_resource_with_invalid_params(client: TestClient) -> None:
         '/accounts/NOT_EXISTS',
         json=wrong_params,
     )
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 def test_retrieve_custom_method(client: TestClient, card: Card) -> None:
