@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
 from pydantic import ValidationError
+from pydantic.fields import Field
 from pydantic.main import BaseModel
 from starlette_context import context
 
@@ -256,9 +257,20 @@ class RestApiBlueprint(APIRouter):
 
             # Build dynamically types for openapi documentation
             class QueryResponse(BaseModel):
-                items: Optional[List[response_model or Any]] = None
-                next_page_uri: Optional[str] = None
-                count: Optional[int] = None
+                items: Optional[List[response_model or Any]] = Field(
+                    None,
+                    description=f'List of {cls.__name__} that match with query filters',
+                )
+                next_page_uri: Optional[str] = Field(
+                    None, description='URL to fetch the next page of results'
+                )
+                count: Optional[int] = Field(
+                    None,
+                    description=(
+                        f'Counter of {cls.__name__} objects that match with query filters.  \n'
+                        f'Included in response only if `count` param was `true`'
+                    ),
+                )
 
             QueryResponse.__name__ = f'QueryResponse{cls.__name__}'
 
@@ -286,13 +298,17 @@ class RestApiBlueprint(APIRouter):
                     "value": {"count": 1},
                 },
             ]
+            query_description = (
+                f'Make queries in resource {cls.__name__} and filter the result using path parameters.  \n'
+                f'The items are paginated, to iterate over them use the `next_page_uri` included in response.  \n'
+                f'If you need only a counter not the data send value `true` in `count` param.'
+            )
 
             @self.get(
                 path,
                 summary=f'Query {cls.__name__}',
                 response_model=QueryResponse,
-                description=f'Method for queries in resource {cls.__name__}. '
-                f'Filter response items using query params',
+                description=query_description,
                 responses=get_response(200, 'Successful Response', examples),
                 openapi_extra={"parameters": query_params},
             )

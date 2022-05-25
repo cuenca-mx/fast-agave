@@ -3,6 +3,8 @@ from typing import Optional
 from cuenca_validations.types import QueryParams
 from pydantic import BaseModel
 import datetime as dt
+
+from pydantic.fields import Field
 from pydantic.main import BaseConfig
 
 
@@ -10,7 +12,9 @@ class AccountQuery(QueryParams):
     name: Optional[str] = None
     user_id: Optional[str] = None
     platform_id: Optional[str] = None
-    is_active: Optional[bool] = None
+    is_active: Optional[bool] = Field(
+        None, description='description for field'
+    )
 
 
 class TransactionQuery(QueryParams):
