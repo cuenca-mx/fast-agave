@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 from cuenca_validations.types import QueryParams
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
@@ -350,9 +350,7 @@ class RestApiBlueprint(APIRouter):
                         await _all(query_params, filters, path)
                     )
                 else:
-                    result = await _all(
-                        query_params, filters, path
-                    )
+                    result = await _all(query_params, filters, path)
                 return result
 
             async def _count(filters: Q):
