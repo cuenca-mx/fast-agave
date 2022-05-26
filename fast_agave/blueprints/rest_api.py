@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 from cuenca_validations.types import QueryParams
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
@@ -111,8 +111,11 @@ class RestApiBlueprint(APIRouter):
             :param cls: Resoucre class
             :return:
             """
-
-            response_model = getattr(cls, '_response_model', None)
+            response_model = None
+            response_sample = {}
+            if hasattr(cls, 'response_model'):
+                response_model = cls.response_model
+                response_sample = response_model.schema().get('example')
 
             """ POST /resource
             Create a FastApi endpoint using the method "create"
@@ -273,22 +276,17 @@ class RestApiBlueprint(APIRouter):
                 )
 
             QueryResponse.__name__ = f'QueryResponse{cls.__name__}'
-
-            validator = getattr(cls, 'query_validator', QueryParams)
-            query_params = [
-                {'name': key, 'in': 'path', 'schema': value}
-                for key, value in validator.schema()['properties'].items()
-            ]
-
+            query_validator = getattr(cls, 'query_validator', QueryParams)
+            query_description = (
+                f'Make queries in resource {cls.__name__} and filter the result using query parameters.  \n'
+                f'The items are paginated, to iterate over them use the `next_page_uri` included in response.  \n'
+                f'If you need only a counter not the data send value `true` in `count` param.'
+            )
             examples = [
                 {
                     "summary": "Query objects",
                     "value": {
-                        "items": [
-                            response_model.schema().get('example')
-                            if response_model
-                            else {}
-                        ],
+                        "items": [response_sample],
                         "next_page_uri": f'{path}?param1=value1&param2=value2',
                     },
                 },
@@ -298,11 +296,6 @@ class RestApiBlueprint(APIRouter):
                     "value": {"count": 1},
                 },
             ]
-            query_description = (
-                f'Make queries in resource {cls.__name__} and filter the result using path parameters.  \n'
-                f'The items are paginated, to iterate over them use the `next_page_uri` included in response.  \n'
-                f'If you need only a counter not the data send value `true` in `count` param.'
-            )
 
             @self.get(
                 path,
@@ -310,10 +303,9 @@ class RestApiBlueprint(APIRouter):
                 response_model=QueryResponse,
                 description=query_description,
                 responses=get_response(200, 'Successful Response', examples),
-                openapi_extra={"parameters": query_params},
             )
             @copy_attributes(cls)
-            async def query(request: Request):
+            async def query(query_params: query_validator = Depends()):
                 """GET /resource
                 Method for queries in resource. Use "query_validator" type
                 defined in decorated class to validate the params.
@@ -338,11 +330,6 @@ class RestApiBlueprint(APIRouter):
                 ):
                     raise HTTPException(405)
 
-                try:
-                    query_params = cls.query_validator(**request.query_params)
-                except ValidationError as e:
-                    return Response(content=e.json(), status_code=400)
-
                 if self.platform_id_filter_required() and hasattr(
                     cls.model, 'platform_id'
                 ):
@@ -360,11 +347,11 @@ class RestApiBlueprint(APIRouter):
                     result = await _count(filters)
                 elif hasattr(cls, 'query'):
                     result = await cls.query(
-                        await _all(query_params, filters, request.url.path)
+                        await _all(query_params, filters, path)
                     )
                 else:
                     result = await _all(
-                        query_params, filters, request.url.path
+                        query_params, filters, path
                     )
                 return result
 

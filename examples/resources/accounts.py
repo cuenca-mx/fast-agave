@@ -20,7 +20,7 @@ class Account:
     update_validator = AccountUpdateRequest
     get_query_filter = generic_query
 
-    _response_model = AccountResponse
+    response_model = AccountResponse
 
     @staticmethod
     async def create(request: AccountRequest) -> Response:
