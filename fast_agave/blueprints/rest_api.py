@@ -120,6 +120,7 @@ class RestApiBlueprint(APIRouter):
             """
             response_model = None
             response_sample = {}
+            include_in_schema = getattr(cls, 'include_in_schema', True)
             if hasattr(cls, 'response_model'):
                 response_model = cls.response_model
                 response_sample = response_model.schema().get('example')
@@ -137,6 +138,7 @@ class RestApiBlueprint(APIRouter):
                     summary=f'Create {cls.__name__}',
                     response_model=response_model,
                     status_code=status.HTTP_201_CREATED,
+                    include_in_schema=include_in_schema,
                 )
                 route(cls.create)
             elif hasattr(cls, 'upload'):
@@ -145,6 +147,7 @@ class RestApiBlueprint(APIRouter):
                     path,
                     summary=f'Upload {cls.__name__}',
                     response_model=response_model,
+                    include_in_schema=include_in_schema,
                     openapi_extra={
                         "requestBody": {
                             "content": {
@@ -178,6 +181,7 @@ class RestApiBlueprint(APIRouter):
                     response_model=response_model,
                     responses={**ERROR_404},
                     description=f'Use id param to delete the {cls.__name__} object',
+                    include_in_schema=include_in_schema,
                 )
                 @copy_attributes(cls)
                 async def delete(id: str, request: Request):
@@ -195,6 +199,7 @@ class RestApiBlueprint(APIRouter):
                     summary=f'Update {cls.__name__}',
                     response_model=response_model,
                     description=f'Use id param to update the {cls.__name__} object',
+                    include_in_schema=include_in_schema,
                 )
 
                 @copy_attributes(cls)
@@ -222,6 +227,7 @@ class RestApiBlueprint(APIRouter):
                 response_model=response_model,
                 responses={**ERROR_404},
                 description=f'Use id param to retrieve the {cls.__name__} object',
+                include_in_schema=include_in_schema,
             )
             @copy_attributes(cls)
             async def retrieve(id: str, request: Request):
@@ -311,6 +317,7 @@ class RestApiBlueprint(APIRouter):
                 response_model=QueryResponse,
                 description=query_description,
                 responses=get_response(200, 'Successful Response', examples),
+                include_in_schema=include_in_schema,
             )
             @copy_attributes(cls)
             async def query(query_params: query_validator = Depends()):

@@ -50,9 +50,7 @@ class AccountResponse(BaseModel):
     deactivated_at: Optional[dt.datetime] = None
 
     class Config(BaseConfig):
-        fields = {
-            'name': {'description': 'Sample description'}
-        }
+        fields = {'name': {'description': 'Sample description'}}
         schema_extra = {
             'example': {
                 'id': 'AC-123456',
