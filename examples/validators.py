@@ -12,9 +12,7 @@ class AccountQuery(QueryParams):
     name: Optional[str] = None
     user_id: Optional[str] = None
     platform_id: Optional[str] = None
-    is_active: Optional[bool] = Field(
-        None, description='description for field'
-    )
+    is_active: Optional[bool] = None
 
 
 class TransactionQuery(QueryParams):
@@ -33,6 +31,9 @@ class AccountRequest(BaseModel):
     name: str
 
     class Config(BaseConfig):
+        fields = {
+            'name': {'description': 'Sample description'},
+        }
         schema_extra = {
             "example": {
                 "name": "Doroteo Arango",
@@ -49,8 +50,11 @@ class AccountResponse(BaseModel):
     deactivated_at: Optional[dt.datetime] = None
 
     class Config(BaseConfig):
+        fields = {
+            'name': {'description': 'Sample description'}
+        }
         schema_extra = {
-            "example": {
+            'example': {
                 'id': 'AC-123456',
                 'name': 'Doroteo Arango',
                 'user_id': 'US123456789',

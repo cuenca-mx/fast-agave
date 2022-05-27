@@ -3,7 +3,14 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 from cuenca_validations.types import QueryParams
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Request,
+    status,
+)
 from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
@@ -129,6 +136,7 @@ class RestApiBlueprint(APIRouter):
                     path,
                     summary=f'Create {cls.__name__}',
                     response_model=response_model,
+                    status_code=status.HTTP_201_CREATED,
                 )
                 route(cls.create)
             elif hasattr(cls, 'upload'):
