@@ -4,7 +4,6 @@ from cuenca_validations.types import QueryParams
 from pydantic import BaseModel
 import datetime as dt
 
-from pydantic.fields import Field
 from pydantic.main import BaseConfig
 
 

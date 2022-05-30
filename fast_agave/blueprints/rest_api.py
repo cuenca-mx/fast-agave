@@ -3,14 +3,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 from cuenca_validations.types import QueryParams
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    HTTPException,
-    Request,
-    status,
-)
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, status
 from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
@@ -97,6 +90,7 @@ class RestApiBlueprint(APIRouter):
         @app.resource('/my_resource')
         class Items(Resource):
             model = MyMongoModel
+            response_model = MyPydanticModel (Resource Interface)
             query_validator = MyPydanticModel
 
             def create(): ...
@@ -311,14 +305,6 @@ class RestApiBlueprint(APIRouter):
                 },
             ]
 
-            @self.get(
-                path,
-                summary=f'Query {cls.__name__}',
-                response_model=QueryResponse,
-                description=query_description,
-                responses=get_response(200, 'Successful Response', examples),
-                include_in_schema=include_in_schema,
-            )
             @copy_attributes(cls)
             async def query(query_params: query_validator = Depends()):
                 """GET /resource
@@ -340,11 +326,6 @@ class RestApiBlueprint(APIRouter):
                     next_page = <url_for_next_items>
                 }
                 """
-                if not hasattr(cls, 'query_validator') or not hasattr(
-                    cls, 'get_query_filter'
-                ):
-                    raise HTTPException(405)
-
                 if self.platform_id_filter_required() and hasattr(
                     cls.model, 'platform_id'
                 ):
@@ -403,6 +384,21 @@ class RestApiBlueprint(APIRouter):
                         params.pop('platform_id')
                     next_page_uri = f'{resource_path}?{urlencode(params)}'
                 return dict(items=item_dicts, next_page_uri=next_page_uri)
+
+            if hasattr(cls, 'query_validator') and hasattr(
+                cls, 'get_query_filter'
+            ):
+                route = self.get(
+                    path,
+                    summary=f'Query {cls.__name__}',
+                    response_model=QueryResponse,
+                    description=query_description,
+                    responses=get_response(
+                        200, 'Successful Response', examples
+                    ),
+                    include_in_schema=include_in_schema,
+                )
+                route(query)
 
             return cls
 

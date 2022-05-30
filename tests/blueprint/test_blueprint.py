@@ -247,13 +247,13 @@ def test_cannot_query_resource(client: TestClient) -> None:
 
 
 def test_cannot_create_resource(client: TestClient) -> None:
-    response = client.post('/transactions', json=dict())
+    response = client.post('/billers', json=dict())
     assert response.status_code == 405
     assert response.json() == dict(error='Method Not Allowed')
 
 
 def test_cannot_update_resource(client: TestClient) -> None:
-    response = client.patch('/transactions', json=dict())
+    response = client.patch('/transactions/123', json=dict())
     assert response.status_code == 405
     assert response.json() == dict(error='Method Not Allowed')
 
