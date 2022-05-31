@@ -258,6 +258,10 @@ class RestApiBlueprint(APIRouter):
             "query_validator" to validate the params.
             "get_query_filter" to provide the way that the params are used to filter data
             """
+            if not hasattr(cls, 'query_validator') or not hasattr(
+                cls, 'get_query_filter'
+            ):
+                return cls
 
             # Build dynamically types for openapi documentation
             class QueryResponse(BaseModel):
@@ -297,7 +301,6 @@ class RestApiBlueprint(APIRouter):
                     "value": {"count": 1},
                 },
             ]
-            query_validator = getattr(cls, 'query_validator', QueryParams)
 
             def validate_params(request: Request):
                 try:
@@ -305,9 +308,17 @@ class RestApiBlueprint(APIRouter):
                 except ValidationError as e:
                     raise UnprocessableEntity(e.json())
 
+            @self.get(
+                path,
+                summary=f'Query {cls.__name__}',
+                response_model=QueryResponse,
+                description=query_description,
+                responses=self._openapi(200, 'Successful Response', examples),
+                include_in_schema=include_in_schema,
+            )
             @copy_attributes(cls)
             async def query(
-                query_params: query_validator = Depends(validate_params),
+                query_params: cls.query_validator = Depends(validate_params),  # type: ignore
             ):
                 """GET /resource
                 Method for queries in resource. Use "query_validator" type
@@ -386,21 +397,6 @@ class RestApiBlueprint(APIRouter):
                         params.pop('platform_id')
                     next_page_uri = f'{resource_path}?{urlencode(params)}'
                 return dict(items=item_dicts, next_page_uri=next_page_uri)
-
-            if hasattr(cls, 'query_validator') and hasattr(
-                cls, 'get_query_filter'
-            ):
-                route = self.get(
-                    path,
-                    summary=f'Query {cls.__name__}',
-                    response_model=QueryResponse,
-                    description=query_description,
-                    responses=self._openapi(
-                        200, 'Successful Response', examples
-                    ),
-                    include_in_schema=include_in_schema,
-                )
-                route(query)
 
             return cls
 
