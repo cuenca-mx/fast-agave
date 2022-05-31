@@ -219,7 +219,7 @@ def test_query_user_id_filter_required(
 def test_query_resource_with_invalid_params(client: TestClient) -> None:
     wrong_params = dict(wrong_param='wrong_value')
     response = client.get(f'/accounts?{urlencode(wrong_params)}')
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 @pytest.mark.usefixtures('cards')

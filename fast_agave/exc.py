@@ -38,6 +38,11 @@ class ConflictError(FastAgaveError):
 
 
 @dataclass
+class UnprocessableEntity(FastAgaveError):
+    status_code: int = 422
+
+
+@dataclass
 class TooManyRequests(FastAgaveError):
     status_code: int = 429
 

@@ -19,7 +19,6 @@ class Account:
     query_validator = AccountQuery
     update_validator = AccountUpdateRequest
     get_query_filter = generic_query
-
     response_model = AccountResponse
 
     @staticmethod

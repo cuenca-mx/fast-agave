@@ -12,30 +12,13 @@ from pydantic.fields import Field
 from pydantic.main import BaseModel
 from starlette_context import context
 
-from ..exc import NotFoundError
+from ..exc import NotFoundError, UnprocessableEntity
 from .decorators import copy_attributes
 
-
-def get_response(code: int, description, samples: List[Dict]):
-    examples = {f'example_{i}': ex for i, ex in enumerate(samples)}
-    return {
-        code: {
-            "description": description,
-            "content": {"application/json": {"examples": examples}},
-        },
-    }
-
-
-ERROR_404 = get_response(
-    404,
-    'Item not found',
-    [
-        {
-            "summary": "Not found item",
-            "value": {"error": "Not valid id"},
-        }
-    ],
-)
+SAMPLE_404 = {
+    "summary": "Not found item",
+    "value": {"error": "Not valid id"},
+}
 
 
 class RestApiBlueprint(APIRouter):
@@ -83,6 +66,16 @@ class RestApiBlueprint(APIRouter):
         except DoesNotExist:
             raise NotFoundError('Not valid id')
         return data
+
+    @staticmethod
+    def _openapi(code: int, description, samples: List[Dict]):
+        examples = {f'example_{i}': ex for i, ex in enumerate(samples)}
+        return {
+            code: {
+                "description": description,
+                "content": {"application/json": {"examples": examples}},
+            },
+        }
 
     def resource(self, path: str):
         """Decorator to transform a class in FastApi REST endpoints
@@ -167,13 +160,14 @@ class RestApiBlueprint(APIRouter):
             """ DELETE /resource/{id}
             Use "delete" method (if exists) to create the FastApi endpoint
             """
+            error_404 = self._openapi(404, 'Item not found', [SAMPLE_404])
             if hasattr(cls, 'delete'):
 
                 @self.delete(
                     path + '/{id}',
                     summary=f'Delete {cls.__name__}',
                     response_model=response_model,
-                    responses={**ERROR_404},
+                    responses={**error_404},
                     description=f'Use id param to delete the {cls.__name__} object',
                     include_in_schema=include_in_schema,
                 )
@@ -188,14 +182,15 @@ class RestApiBlueprint(APIRouter):
             completely your responsibility.
             """
             if hasattr(cls, 'update'):
-                route = self.patch(
+
+                @self.patch(
                     path + '/{id}',
                     summary=f'Update {cls.__name__}',
                     response_model=response_model,
+                    responses={**error_404},
                     description=f'Use id param to update the {cls.__name__} object',
                     include_in_schema=include_in_schema,
                 )
-
                 @copy_attributes(cls)
                 async def update(
                     id: str,
@@ -208,8 +203,6 @@ class RestApiBlueprint(APIRouter):
                     except TypeError:
                         return await cls.update(obj, update_params)
 
-                route(update)
-
             """ GET /resource/{id}
             By default GET method only fetch object from DB.
             If you need extra logic override "retrieve" or "download" methods
@@ -219,7 +212,7 @@ class RestApiBlueprint(APIRouter):
                 path + '/{id}',
                 summary=f'Retrieve {cls.__name__}',
                 response_model=response_model,
-                responses={**ERROR_404},
+                responses={**error_404},
                 description=f'Use id param to retrieve the {cls.__name__} object',
                 include_in_schema=include_in_schema,
             )
@@ -284,7 +277,7 @@ class RestApiBlueprint(APIRouter):
                 )
 
             QueryResponse.__name__ = f'QueryResponse{cls.__name__}'
-            query_validator = getattr(cls, 'query_validator', QueryParams)
+
             query_description = (
                 f'Make queries in resource {cls.__name__} and filter the result using query parameters.  \n'
                 f'The items are paginated, to iterate over them use the `next_page_uri` included in response.  \n'
@@ -304,9 +297,18 @@ class RestApiBlueprint(APIRouter):
                     "value": {"count": 1},
                 },
             ]
+            query_validator = getattr(cls, 'query_validator', QueryParams)
+
+            def validate_params(request: Request):
+                try:
+                    return cls.query_validator(**request.query_params)
+                except ValidationError as e:
+                    raise UnprocessableEntity(e.json())
 
             @copy_attributes(cls)
-            async def query(query_params: query_validator = Depends()):
+            async def query(
+                query_params: query_validator = Depends(validate_params),
+            ):
                 """GET /resource
                 Method for queries in resource. Use "query_validator" type
                 defined in decorated class to validate the params.
@@ -393,7 +395,7 @@ class RestApiBlueprint(APIRouter):
                     summary=f'Query {cls.__name__}',
                     response_model=QueryResponse,
                     description=query_description,
-                    responses=get_response(
+                    responses=self._openapi(
                         200, 'Successful Response', examples
                     ),
                     include_in_schema=include_in_schema,
