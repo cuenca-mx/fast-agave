@@ -122,7 +122,7 @@ class RestApiBlueprint(APIRouter):
             if hasattr(cls, 'create'):
                 route = self.post(
                     path,
-                    summary=f'Create {cls.__name__}',
+                    summary=f'{cls.__name__} - Create',
                     response_model=response_model,
                     status_code=status.HTTP_201_CREATED,
                     include_in_schema=include_in_schema,
@@ -132,7 +132,7 @@ class RestApiBlueprint(APIRouter):
 
                 @self.post(
                     path,
-                    summary=f'Upload {cls.__name__}',
+                    summary=f'{cls.__name__} - Upload',
                     response_model=response_model,
                     include_in_schema=include_in_schema,
                     openapi_extra={
@@ -165,7 +165,7 @@ class RestApiBlueprint(APIRouter):
 
                 @self.delete(
                     path + '/{id}',
-                    summary=f'Delete {cls.__name__}',
+                    summary=f'{cls.__name__} - Delete',
                     response_model=response_model,
                     responses={**error_404},
                     description=f'Use id param to delete the {cls.__name__} object',
@@ -185,7 +185,7 @@ class RestApiBlueprint(APIRouter):
 
                 @self.patch(
                     path + '/{id}',
-                    summary=f'Update {cls.__name__}',
+                    summary=f'{cls.__name__} - Update',
                     response_model=response_model,
                     responses={**error_404},
                     description=f'Use id param to update the {cls.__name__} object',
@@ -210,7 +210,7 @@ class RestApiBlueprint(APIRouter):
 
             @self.get(
                 path + '/{id}',
-                summary=f'Retrieve {cls.__name__}',
+                summary=f'{cls.__name__} - Retrieve',
                 response_model=response_model,
                 responses={**error_404},
                 description=f'Use id param to retrieve the {cls.__name__} object',
@@ -310,7 +310,7 @@ class RestApiBlueprint(APIRouter):
 
             @self.get(
                 path,
-                summary=f'Query {cls.__name__}',
+                summary=f'{cls.__name__} - Query',
                 response_model=QueryResponse,
                 description=query_description,
                 responses=self._openapi(200, 'Successful Response', examples),
