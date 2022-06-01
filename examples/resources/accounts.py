@@ -4,7 +4,12 @@ from fastapi.responses import JSONResponse as Response
 from fastapi import Request
 from fast_agave.filters import generic_query
 from ..models import Account as AccountModel
-from ..validators import AccountQuery, AccountRequest, AccountUpdateRequest
+from ..validators import (
+    AccountQuery,
+    AccountRequest,
+    AccountUpdateRequest,
+    AccountResponse,
+)
 from .base import app
 
 
@@ -14,9 +19,11 @@ class Account:
     query_validator = AccountQuery
     update_validator = AccountUpdateRequest
     get_query_filter = generic_query
+    response_model = AccountResponse
 
     @staticmethod
     async def create(request: AccountRequest) -> Response:
+        """This is the description for openapi"""
         account = AccountModel(
             name=request.name,
             user_id=app.current_user_id,

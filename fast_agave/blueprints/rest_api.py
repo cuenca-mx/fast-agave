@@ -1,17 +1,23 @@
 import mimetypes
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 from cuenca_validations.types import QueryParams
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, status
 from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
 from pydantic import ValidationError
+from pydantic.main import BaseModel
 from starlette_context import context
 
-from ..exc import NotFoundError
+from ..exc import NotFoundError, UnprocessableEntity
 from .decorators import copy_attributes
+
+SAMPLE_404 = {
+    "summary": "Not found item",
+    "value": {"error": "Not valid id"},
+}
 
 
 class RestApiBlueprint(APIRouter):
@@ -66,6 +72,7 @@ class RestApiBlueprint(APIRouter):
         @app.resource('/my_resource')
         class Items(Resource):
             model = MyMongoModel
+            response_model = MyPydanticModel (Resource Interface)
             query_validator = MyPydanticModel
 
             def create(): ...
@@ -87,6 +94,12 @@ class RestApiBlueprint(APIRouter):
             :param cls: Resoucre class
             :return:
             """
+            response_model = Any
+            response_sample = {}
+            include_in_schema = getattr(cls, 'include_in_schema', True)
+            if hasattr(cls, 'response_model'):
+                response_model = cls.response_model
+                response_sample = response_model.schema().get('example')
 
             """ POST /resource
             Create a FastApi endpoint using the method "create"
@@ -96,11 +109,31 @@ class RestApiBlueprint(APIRouter):
             validates form data using `Resource.upload_validator`.
             """
             if hasattr(cls, 'create'):
-                route = self.post(path)
+                route = self.post(
+                    path,
+                    summary=f'{cls.__name__} - Create',
+                    response_model=response_model,
+                    status_code=status.HTTP_201_CREATED,
+                    include_in_schema=include_in_schema,
+                )
                 route(cls.create)
             elif hasattr(cls, 'upload'):
 
-                @self.post(path)
+                @self.post(
+                    path,
+                    summary=f'{cls.__name__} - Upload',
+                    response_model=response_model,
+                    include_in_schema=include_in_schema,
+                    openapi_extra={
+                        "requestBody": {
+                            "content": {
+                                "form-data": {
+                                    "schema": cls.upload_validator.schema()
+                                }
+                            }
+                        }
+                    },
+                )
                 @copy_attributes(cls)
                 async def upload(
                     request: Request, background_tasks: BackgroundTasks
@@ -116,9 +149,17 @@ class RestApiBlueprint(APIRouter):
             """ DELETE /resource/{id}
             Use "delete" method (if exists) to create the FastApi endpoint
             """
+            error_404 = json_openapi(404, 'Item not found', [SAMPLE_404])
             if hasattr(cls, 'delete'):
 
-                @self.delete(path + '/{id}')
+                @self.delete(
+                    path + '/{id}',
+                    summary=f'{cls.__name__} - Delete',
+                    response_model=response_model,
+                    responses=error_404,
+                    description=f'Use id param to delete the {cls.__name__} object',
+                    include_in_schema=include_in_schema,
+                )
                 @copy_attributes(cls)
                 async def delete(id: str, request: Request):
                     obj = await self.retrieve_object(cls, id)
@@ -130,25 +171,40 @@ class RestApiBlueprint(APIRouter):
             completely your responsibility.
             """
             if hasattr(cls, 'update'):
-                route = self.patch(path + '/{id}')
 
+                @self.patch(
+                    path + '/{id}',
+                    summary=f'{cls.__name__} - Update',
+                    response_model=response_model,
+                    responses=error_404,
+                    description=f'Use id param to update the {cls.__name__} object',
+                    include_in_schema=include_in_schema,
+                )
                 @copy_attributes(cls)
-                async def update(id: str, request: Request):
-                    params = await request.json()
-                    try:
-                        update_params = cls.update_validator(**params)
-                    except ValidationError as exc:
-                        return Response(content=exc.json(), status_code=400)
-
+                async def update(
+                    id: str,
+                    update_params: cls.update_validator,  # type: ignore
+                    request: Request,
+                ):
                     obj = await self.retrieve_object(cls, id)
                     try:
                         return await cls.update(obj, update_params, request)
                     except TypeError:
                         return await cls.update(obj, update_params)
 
-                route(update)
+            """ GET /resource/{id}
+            By default GET method only fetch object from DB.
+            If you need extra logic override "retrieve" or "download" methods
+            """
 
-            @self.get(path + '/{id}')
+            @self.get(
+                path + '/{id}',
+                summary=f'{cls.__name__} - Retrieve',
+                response_model=response_model,
+                responses=error_404,
+                description=f'Use id param to retrieve the {cls.__name__} object',
+                include_in_schema=include_in_schema,
+            )
             @copy_attributes(cls)
             async def retrieve(id: str, request: Request):
                 """GET /resource/{id}
@@ -185,38 +241,82 @@ class RestApiBlueprint(APIRouter):
 
                 return result
 
-            @self.get(path)
-            @copy_attributes(cls)
-            async def query(request: Request):
-                """GET /resource
-                Method for queries in resource. Use "query_validator" type
-                defined in decorated class to validate the params.
+            """ GET /resource?param=value
+            Use GET method to fetch and count filtered objects using query params.
+            To Enable queries you have to define next fields in decorated class
 
-                The "get_query_filter" method defined in decorated class
-                should provide the way that the params are used to filter data
+            query_validator: Pydantic model to validate the params.
+            get_query_filter: Method to provide the way that the params are used to filter data.
+            """
 
-                If param "count" is True return the next response
-                {
-                    count:<count>
+            if not hasattr(cls, 'query_validator') or not hasattr(
+                cls, 'get_query_filter'
+            ):
+                return cls
 
+            query_description = (
+                f'Make queries in resource {cls.__name__} and filter the result using query parameters.  \n'
+                f'The items are paginated, to iterate over them use the `next_page_uri` included in response.  \n'
+                f'If you need only a counter not the data send value `true` in `count` param.'
+            )
+
+            # Build dynamically types for query response
+            class QueryResponse(BaseModel):
+                items: Optional[List[response_model]] = []
+                next_page_uri: Optional[str] = None
+                count: Optional[int] = None
+
+                fields = {
+                    'items': {
+                        'description': f'List of {cls.__name__} that match with query filters'
+                    },
+                    'next_page_uri': {
+                        'description': 'URL to fetch the next page of results'
+                    },
+                    'count': {
+                        'description': f'Counter of {cls.__name__} objects that match with query filters.  \n'
+                        f'Included in response only if `count` param was `true`'
+                    },
                 }
 
-                else the response is like this
-                {
-                    items = [{},{},...]
-                    next_page = <url_for_next_items>
-                }
-                """
-                if not hasattr(cls, 'query_validator') or not hasattr(
-                    cls, 'get_query_filter'
-                ):
-                    raise HTTPException(405)
+            QueryResponse.__name__ = f'QueryResponse{cls.__name__}'
 
+            examples = [
+                # If param "count" is False return the list of items
+                {
+                    'summary': 'Query objects',
+                    'value': {
+                        'items': [response_sample],
+                        'next_page_uri': f'{path}?param1=value1&param2=value2',
+                    },
+                },
+                # If param "count" is True return a counter
+                {
+                    'summary': 'Count objects',
+                    'description': 'Sending `true` value in `count` param',
+                    'value': {'count': 1},
+                },
+            ]
+
+            def validate_params(request: Request):
                 try:
-                    query_params = cls.query_validator(**request.query_params)
+                    return cls.query_validator(**request.query_params)
                 except ValidationError as e:
-                    return Response(content=e.json(), status_code=400)
+                    raise UnprocessableEntity(e.json())
 
+            @self.get(
+                path,
+                summary=f'{cls.__name__} - Query',
+                response_model=QueryResponse,
+                description=query_description,
+                responses=json_openapi(200, 'Successful Response', examples),
+                include_in_schema=include_in_schema,
+            )
+            @copy_attributes(cls)
+            async def query(
+                query_params: cls.query_validator = Depends(validate_params),  # type: ignore
+            ):
+                """GET /resource"""
                 if self.platform_id_filter_required() and hasattr(
                     cls.model, 'platform_id'
                 ):
@@ -234,12 +334,10 @@ class RestApiBlueprint(APIRouter):
                     result = await _count(filters)
                 elif hasattr(cls, 'query'):
                     result = await cls.query(
-                        await _all(query_params, filters, request.url.path)
+                        await _all(query_params, filters, path)
                     )
                 else:
-                    result = await _all(
-                        query_params, filters, request.url.path
-                    )
+                    result = await _all(query_params, filters, path)
                 return result
 
             async def _count(filters: Q):
@@ -281,3 +379,13 @@ class RestApiBlueprint(APIRouter):
             return cls
 
         return wrapper_resource_class
+
+
+def json_openapi(code: int, description, samples: List[Dict]) -> dict:
+    examples = {f'example_{i}': ex for i, ex in enumerate(samples)}
+    return {
+        code: {
+            'description': description,
+            'content': {'application/json': {'examples': examples}},
+        },
+    }

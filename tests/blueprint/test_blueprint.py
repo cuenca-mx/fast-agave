@@ -81,7 +81,7 @@ def test_update_resource_with_invalid_params(client: TestClient) -> None:
         '/accounts/NOT_EXISTS',
         json=wrong_params,
     )
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 def test_retrieve_custom_method(client: TestClient, card: Card) -> None:
@@ -219,7 +219,7 @@ def test_query_user_id_filter_required(
 def test_query_resource_with_invalid_params(client: TestClient) -> None:
     wrong_params = dict(wrong_param='wrong_value')
     response = client.get(f'/accounts?{urlencode(wrong_params)}')
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 @pytest.mark.usefixtures('cards')
@@ -247,13 +247,13 @@ def test_cannot_query_resource(client: TestClient) -> None:
 
 
 def test_cannot_create_resource(client: TestClient) -> None:
-    response = client.post('/transactions', json=dict())
+    response = client.post('/billers', json=dict())
     assert response.status_code == 405
     assert response.json() == dict(error='Method Not Allowed')
 
 
 def test_cannot_update_resource(client: TestClient) -> None:
-    response = client.patch('/transactions', json=dict())
+    response = client.patch('/transactions/123', json=dict())
     assert response.status_code == 405
     assert response.json() == dict(error='Method Not Allowed')
 
