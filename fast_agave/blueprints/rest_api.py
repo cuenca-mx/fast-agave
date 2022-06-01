@@ -8,7 +8,6 @@ from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
 from pydantic import ValidationError
-from pydantic.fields import Field
 from pydantic.main import BaseModel
 from starlette_context import context
 
@@ -66,16 +65,6 @@ class RestApiBlueprint(APIRouter):
         except DoesNotExist:
             raise NotFoundError('Not valid id')
         return data
-
-    @staticmethod
-    def _openapi(code: int, description, samples: List[Dict]):
-        examples = {f'example_{i}': ex for i, ex in enumerate(samples)}
-        return {
-            code: {
-                "description": description,
-                "content": {"application/json": {"examples": examples}},
-            },
-        }
 
     def resource(self, path: str):
         """Decorator to transform a class in FastApi REST endpoints
@@ -160,14 +149,14 @@ class RestApiBlueprint(APIRouter):
             """ DELETE /resource/{id}
             Use "delete" method (if exists) to create the FastApi endpoint
             """
-            error_404 = self._openapi(404, 'Item not found', [SAMPLE_404])
+            error_404 = json_openapi(404, 'Item not found', [SAMPLE_404])
             if hasattr(cls, 'delete'):
 
                 @self.delete(
                     path + '/{id}',
                     summary=f'{cls.__name__} - Delete',
                     response_model=response_model,
-                    responses={**error_404},
+                    responses=error_404,
                     description=f'Use id param to delete the {cls.__name__} object',
                     include_in_schema=include_in_schema,
                 )
@@ -187,7 +176,7 @@ class RestApiBlueprint(APIRouter):
                     path + '/{id}',
                     summary=f'{cls.__name__} - Update',
                     response_model=response_model,
-                    responses={**error_404},
+                    responses=error_404,
                     description=f'Use id param to update the {cls.__name__} object',
                     include_in_schema=include_in_schema,
                 )
@@ -212,7 +201,7 @@ class RestApiBlueprint(APIRouter):
                 path + '/{id}',
                 summary=f'{cls.__name__} - Retrieve',
                 response_model=response_model,
-                responses={**error_404},
+                responses=error_404,
                 description=f'Use id param to retrieve the {cls.__name__} object',
                 include_in_schema=include_in_schema,
             )
@@ -254,51 +243,60 @@ class RestApiBlueprint(APIRouter):
 
             """ GET /resource?param=value
             Use GET method to fetch and count filtered objects using query params.
-            To Enable queries you have to define these fields in decorated class
-            "query_validator" to validate the params.
-            "get_query_filter" to provide the way that the params are used to filter data
+            To Enable queries you have to define next fields in decorated class
+
+            query_validator: Pydantic model to validate the params.
+            get_query_filter: Method to provide the way that the params are used to filter data.
             """
+
             if not hasattr(cls, 'query_validator') or not hasattr(
                 cls, 'get_query_filter'
             ):
                 return cls
-
-            # Build dynamically types for openapi documentation
-            class QueryResponse(BaseModel):
-                items: Optional[List[response_model or Any]] = Field(
-                    None,
-                    description=f'List of {cls.__name__} that match with query filters',
-                )
-                next_page_uri: Optional[str] = Field(
-                    None, description='URL to fetch the next page of results'
-                )
-                count: Optional[int] = Field(
-                    None,
-                    description=(
-                        f'Counter of {cls.__name__} objects that match with query filters.  \n'
-                        f'Included in response only if `count` param was `true`'
-                    ),
-                )
-
-            QueryResponse.__name__ = f'QueryResponse{cls.__name__}'
 
             query_description = (
                 f'Make queries in resource {cls.__name__} and filter the result using query parameters.  \n'
                 f'The items are paginated, to iterate over them use the `next_page_uri` included in response.  \n'
                 f'If you need only a counter not the data send value `true` in `count` param.'
             )
+
+            # Build dynamically types for query response
+            item_type = response_model or Any
+
+            class QueryResponse(BaseModel):
+                items: Optional[List[item_type]] = []
+                next_page_uri: Optional[str] = None
+                count: Optional[int] = None
+
+                fields = {
+                    'items': {
+                        'description': f'List of {cls.__name__} that match with query filters'
+                    },
+                    'next_page_uri': {
+                        'description': 'URL to fetch the next page of results'
+                    },
+                    'count': {
+                        'description': f'Counter of {cls.__name__} objects that match with query filters.  \n'
+                        f'Included in response only if `count` param was `true`'
+                    },
+                }
+
+            QueryResponse.__name__ = f'QueryResponse{cls.__name__}'
+
             examples = [
+                # If param "count" is False return the list of items
                 {
-                    "summary": "Query objects",
-                    "value": {
-                        "items": [response_sample],
-                        "next_page_uri": f'{path}?param1=value1&param2=value2',
+                    'summary': 'Query objects',
+                    'value': {
+                        'items': [response_sample],
+                        'next_page_uri': f'{path}?param1=value1&param2=value2',
                     },
                 },
+                # If param "count" is True return a counter
                 {
-                    "summary": "Count objects",
-                    "description": "Sending `true` value in `count` param",
-                    "value": {"count": 1},
+                    'summary': 'Count objects',
+                    'description': 'Sending `true` value in `count` param',
+                    'value': {'count': 1},
                 },
             ]
 
@@ -313,32 +311,14 @@ class RestApiBlueprint(APIRouter):
                 summary=f'{cls.__name__} - Query',
                 response_model=QueryResponse,
                 description=query_description,
-                responses=self._openapi(200, 'Successful Response', examples),
+                responses=json_openapi(200, 'Successful Response', examples),
                 include_in_schema=include_in_schema,
             )
             @copy_attributes(cls)
             async def query(
                 query_params: cls.query_validator = Depends(validate_params),  # type: ignore
             ):
-                """GET /resource
-                Method for queries in resource. Use "query_validator" type
-                defined in decorated class to validate the params.
-
-                The "get_query_filter" method defined in decorated class
-                should provide the way that the params are used to filter data
-
-                If param "count" is True return the next response
-                {
-                    count:<count>
-
-                }
-
-                else the response is like this
-                {
-                    items = [{},{},...]
-                    next_page = <url_for_next_items>
-                }
-                """
+                """GET /resource"""
                 if self.platform_id_filter_required() and hasattr(
                     cls.model, 'platform_id'
                 ):
@@ -401,3 +381,13 @@ class RestApiBlueprint(APIRouter):
             return cls
 
         return wrapper_resource_class
+
+
+def json_openapi(code: int, description, samples: List[Dict]) -> dict:
+    examples = {f'example_{i}': ex for i, ex in enumerate(samples)}
+    return {
+        code: {
+            'description': description,
+            'content': {'application/json': {'examples': examples}},
+        },
+    }

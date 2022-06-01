@@ -34,8 +34,8 @@ class AccountRequest(BaseModel):
             'name': {'description': 'Sample description'},
         }
         schema_extra = {
-            "example": {
-                "name": "Doroteo Arango",
+            'example': {
+                'name': 'Doroteo Arango',
             }
         }
 
@@ -67,7 +67,7 @@ class AccountUpdateRequest(BaseModel):
 
     class Config(BaseConfig):
         schema_extra = {
-            "example": {
+            'example': {
                 'name': 'Pancho Villa',
             }
         }
