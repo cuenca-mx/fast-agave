@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, call
 import pytest
 
 from fast_agave.exc import RetryTask
-from fast_agave.tasks.sqs_tasks import task
+from fast_agave.tasks.sqs_tasks import Queue, task
 
 CORE_QUEUE_REGION = 'us-east-1'
 
@@ -155,3 +155,14 @@ async def test_does_not_retry_on_unhandled_exceptions(sqs_client) -> None:
 
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+
+
+@pytest.mark.asyncio
+async def test_send_task(sqs_client) -> None:
+    message = dict(hello='world!')
+    queue = Queue(sqs_client.queue_url, CORE_QUEUE_REGION)
+
+    await queue.send_task(message, 'SP123')
+    sqs_message = await sqs_client.receive_message()
+    data = json.loads(sqs_message['Messages'][0]['Body'])
+    assert message == data

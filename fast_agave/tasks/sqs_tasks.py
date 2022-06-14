@@ -1,10 +1,12 @@
 import asyncio
 import json
+from dataclasses import dataclass
 from functools import wraps
 from itertools import count
-from typing import Callable, Coroutine
+from typing import Callable, Coroutine, Optional
 
 import aiobotocore
+from cuenca_validations.typing import DictStrAny
 
 from ..exc import RetryTask
 
@@ -73,3 +75,18 @@ def task(
         return start_task
 
     return task_builder
+
+
+@dataclass
+class Queue:
+    queue_url: str
+    region_name: str
+
+    async def send_task(self, message: DictStrAny, message_group_id: Optional[str] = None) -> None:
+        session = aiobotocore.session.get_session()
+        async with session.create_client('sqs', self.region_name) as sqs:
+            response = await sqs.send_message(
+                QueueUrl=self.queue_url,
+                MessageBody=json.dumps(message),
+                MessageGroupId=message_group_id,
+            )
