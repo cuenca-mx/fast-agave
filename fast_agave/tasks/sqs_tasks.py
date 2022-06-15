@@ -5,7 +5,7 @@ from functools import wraps
 from itertools import count
 from typing import Callable, Coroutine, Optional
 
-import aiobotocore
+from aiobotocore.session import get_session
 from cuenca_validations.typing import DictStrAny
 
 from ..exc import RetryTask
@@ -42,7 +42,7 @@ def task(
     def task_builder(task_func: Callable):
         @wraps(task_func)
         async def start_task(*args, **kwargs) -> None:
-            session = aiobotocore.session.get_session()
+            session = get_session()
             async with session.create_client('sqs', region_name) as sqs:
                 for _ in count():
                     response = await sqs.receive_message(
@@ -82,10 +82,12 @@ class Queue:
     queue_url: str
     region_name: str
 
-    async def send_task(self, message: DictStrAny, message_group_id: Optional[str] = None) -> None:
-        session = aiobotocore.session.get_session()
+    async def send_task(
+        self, message: DictStrAny, message_group_id: Optional[str] = None
+    ) -> None:
+        session = get_session()
         async with session.create_client('sqs', self.region_name) as sqs:
-            response = await sqs.send_message(
+            await sqs.send_message(
                 QueueUrl=self.queue_url,
                 MessageBody=json.dumps(message),
                 MessageGroupId=message_group_id,
