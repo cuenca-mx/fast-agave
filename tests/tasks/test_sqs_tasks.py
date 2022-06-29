@@ -1,3 +1,4 @@
+import base64
 import json
 from unittest.mock import AsyncMock, call
 
@@ -166,3 +167,19 @@ async def test_send_task(sqs_client) -> None:
     sqs_message = await sqs_client.receive_message()
     data = json.loads(sqs_message['Messages'][0]['Body'])
     assert message == data
+
+
+@pytest.mark.asyncio
+async def test_send_task_as_celery(sqs_client) -> None:
+    message = dict(hello='world!')
+    queue = Queue(sqs_client.queue_url, CORE_QUEUE_REGION)
+
+    await queue.send_task_as_celery('some.task', message, 'SP123')
+    sqs_message = await sqs_client.receive_message()
+    encoded_data = sqs_message['Messages'][0]['Body']
+    data = json.loads(base64.b64decode(encoded_data.encode('utf-8')).decode())
+    body = json.loads(base64.b64decode(data['body'].encode('utf-8')).decode())
+
+    assert message == body[1]
+    assert data['headers']['lang'] == 'py'
+    assert data['headers']['task'] == 'some.task'
