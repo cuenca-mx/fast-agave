@@ -87,7 +87,8 @@ def test_update_resource_with_invalid_params(client: TestClient) -> None:
 def test_retrieve_custom_method(client: TestClient, card: Card) -> None:
     resp = client.get(f'/cards/{card.id}')
     assert resp.status_code == 200
-    assert resp.json()['number'] == '*' * 16
+    assert resp.json()['number'] == card.number
+    assert resp.json()['last_four_digits'] == card.number[-4:]
 
 
 def test_update_resource_that_doesnt_exist(client: TestClient) -> None:
@@ -229,13 +230,13 @@ def test_query_custom_method(client: TestClient) -> None:
     json_body = resp.json()
     assert resp.status_code == 200
     assert len(json_body['items']) == 2
-    assert all(card['number'] == '*' * 16 for card in json_body['items'])
+    assert all('last_four_digits' in card for card in json_body['items'])
 
     resp = client.get(json_body['next_page_uri'])
     json_body = resp.json()
     assert resp.status_code == 200
     assert len(json_body['items']) == 2
-    assert all(card['number'] == '*' * 16 for card in json_body['items'])
+    assert all('last_four_digits' in card for card in json_body['items'])
 
 
 def test_cannot_query_resource(client: TestClient) -> None:

@@ -81,6 +81,10 @@ class CardQuery(QueryParams):
     number: Optional[str] = None
 
 
+class CardUpdateRequest(BaseModel):
+    status: str
+
+
 class FileUploadValidator(BaseModel):
     file: bytes
     file_name: str

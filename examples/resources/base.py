@@ -8,6 +8,11 @@ from fast_agave.exc import UnauthorizedError
 app = RestApiBlueprint()
 
 
+@app.get('/hello')
+def hello() -> str:
+    return 'hello!'
+
+
 @app.get('/healthy_auth')
 def health_auth_check() -> Dict:
     return dict(greeting="I'm authenticated and healthy !!!")
@@ -29,3 +34,8 @@ def you_shall_not_pass() -> None:
     # La prueba de este endpoint hace un mock a nivel middleware
     # para responder con un `UnauthorizedError`
     ...
+
+
+@app.get('/buggy_endpoint')
+def buggy_endpoint() -> NoReturn:
+    raise Exception('oh no!')
