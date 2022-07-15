@@ -19,7 +19,7 @@ from starlette.middleware.base import (
 
 from fast_agave.exc import FastAgaveError
 
-LOGS_SERVER_URL = os.environ.get('LOGS_SERVER_URL', None)
+LOGS_SERVER_URL = os.environ.get('LOGS_SERVER_URL', '')
 
 
 AUTHED_REQUIRED_HEADERS = {
