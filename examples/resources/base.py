@@ -34,8 +34,3 @@ def you_shall_not_pass() -> None:
     # La prueba de este endpoint hace un mock a nivel middleware
     # para responder con un `UnauthorizedError`
     ...
-
-
-@app.get('/buggy_endpoint')
-def buggy_endpoint() -> NoReturn:
-    raise Exception('oh no!')
