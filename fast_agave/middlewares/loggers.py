@@ -19,9 +19,6 @@ from starlette.middleware.base import (
 
 from fast_agave.exc import FastAgaveError
 
-LOGS_SERVER_URL = os.environ.get('LOGS_SERVER_URL', '')
-
-
 AUTHED_REQUIRED_HEADERS = {
     'x-cuenca-token',
     'x-cuenca-logintoken',
@@ -95,7 +92,7 @@ class OpenSearchLog(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        if not LOGS_SERVER_URL:
+        if not os.environ.get('LOGS_SERVER_URL', ''):
             return await call_next(request)
 
         request_data = dict(request.scope)
