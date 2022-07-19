@@ -47,6 +47,7 @@ NON_VALID_SCOPE_VALUES = [
     'route_handler',
     'router',
     'endpoint',
+    'raw_path',
 ]
 
 
