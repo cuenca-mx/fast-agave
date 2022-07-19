@@ -137,7 +137,7 @@ class OpenSearchLog(BaseHTTPMiddleware):
 
             response_body = mask_sensitive_data(response_body)
         finally:
-            t = asyncio.create_task(
+            asyncio.create_task(
                 self.send_log_to_open_search(
                     request.app.title,
                     request_data,
@@ -145,7 +145,6 @@ class OpenSearchLog(BaseHTTPMiddleware):
                     response_body,
                 )
             )
-            await t
         return response
 
     @classmethod
