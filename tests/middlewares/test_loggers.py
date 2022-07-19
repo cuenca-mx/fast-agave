@@ -13,11 +13,12 @@ from tests.helpers import auth_header
 
 
 @pytest.fixture(autouse=True)
-def patch_log_server_url():
-    with patch(
-        'fast_agave.middlewares.loggers.LOGS_SERVER_URL', 'http://logs.com'
-    ):
-        yield
+def patch_log_server_url(monkeypatch):
+    monkeypatch.setenv('LOGS_SERVER_URL', 'http://logs.com')
+    # with patch(
+    #     'fast_agave.middlewares.loggers.LOGS_SERVER_URL', 'http://logs.com'
+    # ):
+    #     yield
 
 
 @patch('aiohttp.client.ClientSession.put')

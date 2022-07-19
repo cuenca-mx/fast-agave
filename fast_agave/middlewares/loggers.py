@@ -155,6 +155,7 @@ class OpenSearchLog(BaseHTTPMiddleware):
         request_headers: DictStrAny,
         response_body: Optional[DictStrAny] = None,
     ) -> None:
+        log_server_url = os.environ.get('LOGS_SERVER_URL', '')
         data = dict(
             app=app_name,
             request_data=request_data,
@@ -162,5 +163,5 @@ class OpenSearchLog(BaseHTTPMiddleware):
             response_body=response_body,
         )
         async with ClientSession() as session:
-            async with session.put(LOGS_SERVER_URL, json=data):
+            async with session.put(log_server_url, json=data):
                 pass
