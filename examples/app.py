@@ -5,6 +5,7 @@ from mongoengine import connect
 from fastapi import FastAPI
 
 from fast_agave.middlewares import FastAgaveErrorHandler
+from fast_agave.middlewares.loggers import OpenSearchLog
 from .resources import app as resources
 from .middlewares import AuthedMiddleware
 from .tasks.task_example import dummy_task
@@ -13,7 +14,9 @@ connect(host='mongomock://localhost:27017/db')
 app = FastAPI(title='example')
 app.include_router(resources)
 
+
 app.add_middleware(AuthedMiddleware)
+app.add_middleware(OpenSearchLog)
 app.add_middleware(FastAgaveErrorHandler)
 
 

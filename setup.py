@@ -24,6 +24,7 @@ setup(
     python_requires='>=3.8',
     install_requires=[
         'aiobotocore>=2.1.0,<2.2.0',
+        'aiohttp>=3.7.4.post0,<3.8.0',
         'cuenca-validations>=0.9.4,<1.0.0',
         'fastapi>=0.63.0,<0.69.0',
         'mongoengine-plus>=0.0.2,<1.0.0',

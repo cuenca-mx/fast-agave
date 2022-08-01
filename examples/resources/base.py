@@ -8,6 +8,11 @@ from fast_agave.exc import UnauthorizedError
 app = RestApiBlueprint()
 
 
+@app.get('/hello')
+def hello() -> str:
+    return 'hello!'
+
+
 @app.get('/healthy_auth')
 def health_auth_check() -> Dict:
     return dict(greeting="I'm authenticated and healthy !!!")
