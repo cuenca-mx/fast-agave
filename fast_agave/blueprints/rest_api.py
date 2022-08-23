@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
 from pydantic import ValidationError
-from pydantic.main import BaseModel
+from pydantic.main import BaseConfig, BaseModel
 from starlette_context import context
 
 from ..exc import NotFoundError, UnprocessableEntity
@@ -266,18 +266,19 @@ class RestApiBlueprint(APIRouter):
                 next_page_uri: Optional[str] = None
                 count: Optional[int] = None
 
-                fields = {
-                    'items': {
-                        'description': f'List of {cls.__name__} that match with query filters'
-                    },
-                    'next_page_uri': {
-                        'description': 'URL to fetch the next page of results'
-                    },
-                    'count': {
-                        'description': f'Counter of {cls.__name__} objects that match with query filters.  \n'
-                        f'Included in response only if `count` param was `true`'
-                    },
-                }
+                class Config(BaseConfig):
+                    fields = {
+                        'items': {
+                            'description': f'List of {cls.__name__} that match with query filters'
+                        },
+                        'next_page_uri': {
+                            'description': 'URL to fetch the next page of results'
+                        },
+                        'count': {
+                            'description': f'Counter of {cls.__name__} objects that match with query filters.  \n'
+                            f'Included in response only if `count` param was `true`'
+                        },
+                    }
 
             QueryResponse.__name__ = f'QueryResponse{cls.__name__}'
 
