@@ -218,15 +218,21 @@ class RestApiBlueprint(APIRouter):
                 The most of times this implementation is enough and is not
                 necessary define a custom "retrieve" method
                 """
+                print('RETRIEVE')
+                print('retrieving object')
                 obj = await self.retrieve_object(cls, id)
+                print(f'object retrieved: {obj.id}')
 
                 # This case is when the return is not an application/$
                 # but can be some type of file such as image, xml, zip or pdf
                 if hasattr(cls, 'download'):
+                    print('In download. processing cls.download')
                     file = await cls.download(obj)
+                    print('cls.download processed')
                     mimetype = request.headers['accept']
                     extension = mimetypes.guess_extension(mimetype)
                     filename = f'{cls.model._class_name}.{extension}'
+                    print(f'{mimetype}, {extension}, {filename}')
                     result = StreamingResponse(
                         file,
                         media_type=mimetype,
@@ -234,6 +240,7 @@ class RestApiBlueprint(APIRouter):
                             'Content-Disposition': f'attachment; filename={filename}'
                         },
                     )
+                    print(f'RESULT: {result}')
                 elif hasattr(cls, 'retrieve'):
                     result = await cls.retrieve(obj)
                 else:
