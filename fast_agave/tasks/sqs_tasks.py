@@ -4,7 +4,7 @@ from functools import wraps
 from itertools import count
 from typing import Callable, Coroutine
 
-import aiobotocore
+from aiobotocore.session import get_session
 
 from ..exc import RetryTask
 
@@ -40,7 +40,7 @@ def task(
     def task_builder(task_func: Callable):
         @wraps(task_func)
         async def start_task(*args, **kwargs) -> None:
-            session = aiobotocore.session.get_session()
+            session = get_session()
             async with session.create_client('sqs', region_name) as sqs:
                 for _ in count():
                     response = await sqs.receive_message(
