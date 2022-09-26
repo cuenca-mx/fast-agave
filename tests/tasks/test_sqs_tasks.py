@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, call
 
 import pytest
 
+from aiobotocore.httpsession import HTTPClientError
 from fast_agave.exc import RetryTask
 from fast_agave.tasks.sqs_tasks import task
 
@@ -42,6 +43,34 @@ async def test_not_execute_tasks(sqs_client) -> None:
     Este caso es cuando el queue está vacío. No hay nada que ejecutar
     """
     async_mock_function = AsyncMock(return_value=None)
+    # No escribimos un mensaje en el queue
+    await task(
+        queue_url=sqs_client.queue_url,
+        region_name=CORE_QUEUE_REGION,
+        wait_time_seconds=1,
+        visibility_timeout=1,
+    )(async_mock_function)()
+    async_mock_function.assert_not_called()
+    resp = await sqs_client.receive_message()
+    assert 'Messages' not in resp
+
+
+@pytest.mark.asyncio
+async def test_http_client_error_tasks(sqs_client) -> None:
+    """
+    Este caso es cuando el queue está vacío. No hay nada que ejecutar
+    """
+    test_message = dict(id='abc123', name='fast-agave')
+
+    await sqs_client.send_message(
+        MessageBody=json.dumps(test_message),
+        MessageGroupId='1234',
+    )
+    monkeypatch.setattr(
+        'task.task_builder.start_task.sqs.receive_message'
+        AsyncMock(side_effect=HTTPClientError),
+    )
+    async_mock_function = AsyncMock(side_effect=HTTPClientError)
     # No escribimos un mensaje en el queue
     await task(
         queue_url=sqs_client.queue_url,
