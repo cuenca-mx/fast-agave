@@ -6,7 +6,6 @@ from typing import Callable, Coroutine
 
 from aiobotocore.httpsession import HTTPClientError
 from aiobotocore.session import get_session
-from aiohttp import ClientOSError
 
 from ..exc import RetryTask
 
@@ -24,9 +23,6 @@ async def run_task(
         await coro
     except RetryTask:
         delete_message = message_receive_count >= max_retries + 1
-    except ClientOSError:
-        # https://sentry.io/organizations/cuenca-mx/issues/3509541240/?project=6523122&query=is%3Aunresolved&statsPeriod=90d
-        delete_message = False
     finally:
         if delete_message:
             await sqs.delete_message(
