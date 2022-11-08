@@ -1,11 +1,12 @@
 import asyncio
 import json
-from aiohttp import ClientOSError
 from functools import wraps
 from itertools import count
 from typing import Callable, Coroutine
 
+from aiobotocore.httpsession import HTTPClientError
 from aiobotocore.session import get_session
+from aiohttp import ClientOSError
 
 from ..exc import RetryTask
 
@@ -55,7 +56,7 @@ def task(
                             AttributeNames=['ApproximateReceiveCount'],
                         )
                         messages = response['Messages']
-                    except Exception: 
+                    except (KeyError, HTTPClientError):
                         continue
 
                     for message in messages:
