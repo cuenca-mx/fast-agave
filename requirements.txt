@@ -1,6 +1,6 @@
 aiobotocore==2.1.0
 cuenca-validations==0.10.7
-fastapi==0.68.2
+fastapi==0.86.0
 mongoengine-plus==0.0.3
 python-multipart==0.0.5
 starlette-context==0.3.3
