@@ -39,7 +39,6 @@ async def message_consumer(
     sqs,
 ) -> AsyncGenerator:
     for _ in count():
-        print(f'esperando {can_read = }')
         await can_read.wait()
         response = await sqs.receive_message(
             QueueUrl=queue_url,
@@ -58,6 +57,14 @@ async def message_consumer(
             yield message
 
 
+async def get_running_fast_agave_tasks():
+    return [
+        t
+        for t in asyncio.all_tasks()
+        if t.get_name().startswith('fast-agave-task')
+    ]
+
+
 def task(
     queue_url: str,
     region_name: str,
@@ -69,30 +76,19 @@ def task(
         @wraps(task_func)
         async def start_task(*args, **kwargs) -> None:
             can_read = asyncio.Event()
-            concurrency_lock = asyncio.Lock()
-            max_running_tasks = 5
-            running_tasks = 0
+            concurrency_semaphore = asyncio.Semaphore(2)
             session = get_session()
-
             can_read.set()
 
             async def concurrency_controller(coro):
-                async with concurrency_lock:
-                    nonlocal running_tasks
-                    running_tasks += 1
-                    print(f'{max_running_tasks = }')
-                    print(f'incrementando {running_tasks = }')
-                    if running_tasks <= max_running_tasks:
-                        can_read.set()
-                    else:
+                async with concurrency_semaphore:
+                    if concurrency_semaphore.locked():
                         can_read.clear()
 
-                await coro
-
-                async with concurrency_lock:
-                    running_tasks -= 1
-                    can_read.set()
-                    print(f'decrementando {running_tasks = }')
+                    try:
+                        await coro
+                    finally:
+                        can_read.set()
 
             async with session.create_client('sqs', region_name) as sqs:
                 async for message in message_consumer(
@@ -115,55 +111,18 @@ def task(
                                 message['ReceiptHandle'],
                                 message_receive_count,
                                 max_retries,
-                            )
-                        )
+                            ),
+                        ),
+                        name='fast-agave-task',
                     )
+
+                # Espera a que termine todos los tasks pendientes creados por
+                # `asyncio.create_task`. De esta forma los tasks
+                # podrán borrar el mensaje del queue usando la misma instancia
+                # del cliente de SQS
+                running_tasks = await get_running_fast_agave_tasks()
+                await asyncio.gather(*running_tasks)
 
         return start_task
 
     return task_builder
-
-
-# def task(
-#     queue_url: str,
-#     region_name: str,
-#     wait_time_seconds: int = 15,
-#     visibility_timeout: int = 3600,
-#     max_retries: int = 1,
-# ):
-#     def task_builder(task_func: Callable):
-#         @wraps(task_func)
-#         async def start_task(*args, **kwargs) -> None:
-#             session = get_session()
-#             async with session.create_client('sqs', region_name) as sqs:
-#                 for _ in count():
-#                     response = await sqs.receive_message(
-#                         QueueUrl=queue_url,
-#                         WaitTimeSeconds=wait_time_seconds,
-#                         VisibilityTimeout=visibility_timeout,
-#                         AttributeNames=['ApproximateReceiveCount'],
-#                     )
-#                     try:
-#                         messages = response['Messages']
-#                     except KeyError:
-#                         continue
-#
-#                     for message in messages:
-#                         body = json.loads(message['Body'])
-#                         message_receive_count = int(
-#                             message['Attributes']['ApproximateReceiveCount']
-#                         )
-#                         asyncio.create_task(
-#                             run_task(
-#                                 task_func(body),
-#                                 sqs,
-#                                 queue_url,
-#                                 message['ReceiptHandle'],
-#                                 message_receive_count,
-#                                 max_retries,
-#                             )
-#                         )
-#
-#         return start_task
-#
-#     return task_builder

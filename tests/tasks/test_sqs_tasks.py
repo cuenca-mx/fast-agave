@@ -1,3 +1,4 @@
+import asyncio
 import json
 from unittest.mock import AsyncMock, call, patch
 
@@ -6,7 +7,7 @@ import pytest
 from aiobotocore.httpsession import HTTPClientError
 
 from fast_agave.exc import RetryTask
-from fast_agave.tasks.sqs_tasks import task
+from fast_agave.tasks.sqs_tasks import get_running_fast_agave_tasks, task
 
 CORE_QUEUE_REGION = 'us-east-1'
 
@@ -205,3 +206,37 @@ async def test_does_not_retry_on_unhandled_exceptions(sqs_client) -> None:
 
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+
+
+@pytest.mark.asyncio
+async def test_concurrency_controller(
+    sqs_client,
+) -> None:
+    test_message = dict(id='abc123', name='fast-agave')
+    for i in range(15):
+        await sqs_client.send_message(
+            MessageBody=json.dumps(test_message),
+            MessageGroupId='1234',
+        )
+
+    max_running_tasks = 0
+
+    async def task_counter(_) -> None:
+        nonlocal max_running_tasks
+        await asyncio.sleep(1)
+        running_tasks = len(await get_running_fast_agave_tasks())
+        if running_tasks > max_running_tasks:
+            max_running_tasks = running_tasks
+
+    await task(
+        queue_url=sqs_client.queue_url,
+        region_name=CORE_QUEUE_REGION,
+        wait_time_seconds=1,
+        visibility_timeout=1,
+        max_retries=3,
+    )(task_counter)()
+
+    resp = await sqs_client.receive_message()
+    # await asyncio.gather(*running_tasks)
+    assert max_running_tasks == 2
+    # assert 'Messages' not in resp
