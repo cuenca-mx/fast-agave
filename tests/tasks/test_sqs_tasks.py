@@ -1,6 +1,8 @@
 import asyncio
 import json
+import uuid
 from unittest.mock import AsyncMock, call, patch
+
 
 import aiobotocore.client
 import pytest
@@ -212,11 +214,12 @@ async def test_does_not_retry_on_unhandled_exceptions(sqs_client) -> None:
 async def test_concurrency_controller(
     sqs_client,
 ) -> None:
-    test_message = dict(id='abc123', name='fast-agave')
+    message_id = str(uuid.uuid4())
+    test_message = dict(id=message_id, name='fast-agave')
     for i in range(15):
         await sqs_client.send_message(
             MessageBody=json.dumps(test_message),
-            MessageGroupId='1234',
+            MessageGroupId=message_id,
         )
 
     max_running_tasks = 0
@@ -234,9 +237,9 @@ async def test_concurrency_controller(
         wait_time_seconds=1,
         visibility_timeout=1,
         max_retries=3,
+        max_concurrent_tasks=2,
     )(task_counter)()
 
-    resp = await sqs_client.receive_message()
-    # await asyncio.gather(*running_tasks)
+    # resp = await sqs_client.receive_message()
     assert max_running_tasks == 2
     # assert 'Messages' not in resp

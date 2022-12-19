@@ -71,12 +71,13 @@ def task(
     wait_time_seconds: int = 15,
     visibility_timeout: int = 3600,
     max_retries: int = 1,
+    max_concurrent_tasks: int = 1,
 ):
     def task_builder(task_func: Callable):
         @wraps(task_func)
         async def start_task(*args, **kwargs) -> None:
             can_read = asyncio.Event()
-            concurrency_semaphore = asyncio.Semaphore(2)
+            concurrency_semaphore = asyncio.Semaphore(max_concurrent_tasks)
             session = get_session()
             can_read.set()
 
