@@ -4,6 +4,7 @@ from functools import wraps
 from itertools import count
 from typing import Callable, Coroutine
 
+from aiobotocore.httpsession import HTTPClientError
 from aiobotocore.session import get_session
 
 from ..exc import RetryTask
@@ -43,15 +44,18 @@ def task(
             session = get_session()
             async with session.create_client('sqs', region_name) as sqs:
                 for _ in count():
-                    response = await sqs.receive_message(
-                        QueueUrl=queue_url,
-                        WaitTimeSeconds=wait_time_seconds,
-                        VisibilityTimeout=visibility_timeout,
-                        AttributeNames=['ApproximateReceiveCount'],
-                    )
                     try:
+                        response = await sqs.receive_message(
+                            QueueUrl=queue_url,
+                            WaitTimeSeconds=wait_time_seconds,
+                            VisibilityTimeout=visibility_timeout,
+                            AttributeNames=['ApproximateReceiveCount'],
+                        )
                         messages = response['Messages']
                     except KeyError:
+                        continue
+                    except HTTPClientError:
+                        await asyncio.sleep(1)
                         continue
 
                     for message in messages:
