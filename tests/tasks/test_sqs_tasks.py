@@ -3,7 +3,6 @@ import json
 import uuid
 from unittest.mock import AsyncMock, call, patch
 
-
 import aiobotocore.client
 import pytest
 from aiobotocore.httpsession import HTTPClientError
@@ -216,7 +215,7 @@ async def test_concurrency_controller(
 ) -> None:
     message_id = str(uuid.uuid4())
     test_message = dict(id=message_id, name='fast-agave')
-    for i in range(15):
+    for i in range(5):
         await sqs_client.send_message(
             MessageBody=json.dumps(test_message),
             MessageGroupId=message_id,

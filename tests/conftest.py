@@ -198,7 +198,7 @@ def aws_endpoint_urls(
 def patch_tasks_count(monkeypatch: MonkeyPatch) -> None:
     def one_loop(*_, **__):
         # Para pruebas solo unos cuantos ciclos
-        for i in range(20):
+        for i in range(5):
             yield i
 
     monkeypatch.setattr(sqs_tasks, 'count', one_loop)
