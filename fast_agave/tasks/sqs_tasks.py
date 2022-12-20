@@ -71,17 +71,16 @@ def task(
     wait_time_seconds: int = 15,
     visibility_timeout: int = 3600,
     max_retries: int = 1,
-    max_concurrent_tasks: int = 1,
+    max_concurrent_tasks: int = 20,
 ):
     def task_builder(task_func: Callable):
         @wraps(task_func)
         async def start_task(*args, **kwargs) -> None:
             can_read = asyncio.Event()
             concurrency_semaphore = asyncio.Semaphore(max_concurrent_tasks)
-            session = get_session()
             can_read.set()
 
-            async def concurrency_controller(coro):
+            async def concurrency_controller(coro: Coroutine) -> None:
                 async with concurrency_semaphore:
                     if concurrency_semaphore.locked():
                         can_read.clear()
@@ -91,6 +90,7 @@ def task(
                     finally:
                         can_read.set()
 
+            session = get_session()
             async with session.create_client('sqs', region_name) as sqs:
                 async for message in message_consumer(
                     queue_url,
@@ -117,7 +117,7 @@ def task(
                         name='fast-agave-task',
                     )
 
-                # Espera a que termine todos los tasks pendientes creados por
+                # Espera a que terminen todos los tasks pendientes creados por
                 # `asyncio.create_task`. De esta forma los tasks
                 # podrán borrar el mensaje del queue usando la misma instancia
                 # del cliente de SQS
