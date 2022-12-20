@@ -52,7 +52,10 @@ def task(
                             AttributeNames=['ApproximateReceiveCount'],
                         )
                         messages = response['Messages']
-                    except (KeyError, HTTPClientError):
+                    except KeyError:
+                        continue
+                    except HTTPClientError:
+                        await asyncio.sleep(1)
                         continue
 
                     for message in messages:
