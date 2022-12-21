@@ -239,6 +239,4 @@ async def test_concurrency_controller(
         max_concurrent_tasks=2,
     )(task_counter)()
 
-    # resp = await sqs_client.receive_message()
     assert max_running_tasks == 2
-    # assert 'Messages' not in resp
