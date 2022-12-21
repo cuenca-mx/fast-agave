@@ -71,7 +71,7 @@ def task(
     wait_time_seconds: int = 15,
     visibility_timeout: int = 3600,
     max_retries: int = 1,
-    max_concurrent_tasks: int = 10,
+    max_concurrent_tasks: int = 25,
 ):
     def task_builder(task_func: Callable):
         @wraps(task_func)
