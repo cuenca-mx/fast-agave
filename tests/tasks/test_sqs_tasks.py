@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, call, patch
 import aiobotocore.client
 import pytest
 from aiobotocore.httpsession import HTTPClientError
+from pydantic import BaseModel
 
 from fast_agave.exc import RetryTask
 from fast_agave.tasks.sqs_tasks import get_running_fast_agave_tasks, task
@@ -34,6 +35,45 @@ async def test_execute_tasks(sqs_client) -> None:
         wait_time_seconds=1,
         visibility_timeout=1,
     )(async_mock_function)()
+    async_mock_function.assert_called_with(test_message)
+    assert async_mock_function.call_count == 1
+
+    resp = await sqs_client.receive_message()
+    assert 'Messages' not in resp
+
+
+@pytest.mark.asyncio
+async def test_execute_tasks_validator(sqs_client) -> None:
+    async_mock_function = AsyncMock(return_value=None)
+
+    class Validator(BaseModel):
+        id: str
+        name: str
+
+    task_params = dict(
+        queue_url=sqs_client.queue_url,
+        region_name=CORE_QUEUE_REGION,
+        wait_time_seconds=1,
+        visibility_timeout=1,
+        validator=Validator,
+    )
+    # Invalid body, not execute function
+    await sqs_client.send_message(
+        MessageBody=json.dumps(dict(foo='bar')),
+        MessageGroupId='4321',
+    )
+    await task(**task_params)(async_mock_function)()
+    assert async_mock_function.call_count == 0
+    resp = await sqs_client.receive_message()
+    assert 'Messages' not in resp
+
+    # Body approve validator, function receive Validator
+    test_message = Validator(id='abc123', name='fast-agave')
+    await sqs_client.send_message(
+        MessageBody=test_message.json(),
+        MessageGroupId='1234',
+    )
+    await task(**task_params)(async_mock_function)()
     async_mock_function.assert_called_with(test_message)
     assert async_mock_function.call_count == 1
 
