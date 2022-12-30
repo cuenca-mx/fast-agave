@@ -1,26 +1,33 @@
 import asyncio
 import json
+import os
 from functools import wraps
 from itertools import count
-from typing import AsyncGenerator, Callable, Coroutine
+from typing import AsyncGenerator, Callable, Coroutine, Optional, Type
 
 from aiobotocore.httpsession import HTTPClientError
 from aiobotocore.session import get_session
+from pydantic import BaseModel
 
 from ..exc import RetryTask
 
+AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', '')
+
 
 async def run_task(
-    coro: Coroutine,
+    task_func: Callable,
+    body: dict,
     sqs,
     queue_url: str,
     receipt_handle: str,
     message_receive_count: int,
     max_retries: int,
+    validator: Optional[Type[BaseModel]] = None,
 ) -> None:
     delete_message = True
     try:
-        await coro
+        data = validator(**body) if validator else body
+        await task_func(data)
     except RetryTask:
         delete_message = message_receive_count >= max_retries + 1
     finally:
@@ -67,11 +74,12 @@ async def get_running_fast_agave_tasks():
 
 def task(
     queue_url: str,
-    region_name: str,
+    region_name: str = AWS_DEFAULT_REGION,
     wait_time_seconds: int = 15,
     visibility_timeout: int = 3600,
     max_retries: int = 1,
     max_concurrent_tasks: int = 5,
+    validator: Optional[Type[BaseModel]] = None,
 ):
     def task_builder(task_func: Callable):
         @wraps(task_func)
@@ -106,12 +114,14 @@ def task(
                     asyncio.create_task(
                         concurrency_controller(
                             run_task(
-                                task_func(body),
+                                task_func,
+                                body,
                                 sqs,
                                 queue_url,
                                 message['ReceiptHandle'],
                                 message_receive_count,
                                 max_retries,
+                                validator,
                             ),
                         ),
                         name='fast-agave-task',
