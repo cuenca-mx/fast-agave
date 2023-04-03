@@ -24,7 +24,6 @@ async def test_send_task(sqs_client) -> None:
         base64.b64decode(message['body'].encode('utf-8')).decode()
     )
 
-    # breakpoint()
     assert body_json[0] == args
     assert body_json[1] == kwargs
     assert message['headers']['lang'] == 'py'
