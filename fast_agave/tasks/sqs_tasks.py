@@ -2,6 +2,7 @@ import asyncio
 import json
 from functools import wraps
 from itertools import count
+from json import JSONDecodeError
 from typing import AsyncGenerator, Callable, Coroutine
 
 from aiobotocore.httpsession import HTTPClientError
@@ -99,7 +100,11 @@ def task(
                     can_read,
                     sqs,
                 ):
-                    body = json.loads(message['Body'])
+                    try:
+                        body = json.loads(message['Body'])
+                    except JSONDecodeError:
+                        continue
+
                     message_receive_count = int(
                         message['Attributes']['ApproximateReceiveCount']
                     )

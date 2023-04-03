@@ -1,6 +1,7 @@
 import asyncio
 from typing import Dict
 
+import mongomock as mongomock
 from mongoengine import connect
 from fastapi import FastAPI
 
@@ -9,7 +10,10 @@ from .resources import app as resources
 from .middlewares import AuthedMiddleware
 from .tasks.task_example import dummy_task
 
-connect(host='mongomock://localhost:27017/db')
+connect(
+    host='mongodb://localhost:27017/db',
+    mongo_client_class=mongomock.MongoClient,
+)
 app = FastAPI(title='example')
 app.include_router(resources)
 
