@@ -61,10 +61,10 @@ class SqsCeleryClient:
     async def send_task(
         self,
         name: str,
-        args: Iterable = Optional[None],
-        kwargs: Dict = Optional[None],
+        args: Optional[Iterable] = None,
+        kwargs: Optional[Dict] = None,
     ) -> None:
-        celery_message = _build_celery_message(name, args, kwargs)
+        celery_message = _build_celery_message(name, args or (), kwargs or {})
         session = get_session()
         async with session.create_client('sqs', self.region_name) as sqs:
             await sqs.send_message(
