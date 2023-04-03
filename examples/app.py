@@ -11,7 +11,7 @@ from .middlewares import AuthedMiddleware
 from .tasks.task_example import dummy_task
 
 connect(
-    host='mongomock://localhost:27017/db',
+    host='mongodb://localhost:27017/db',
     mongo_client_class=mongomock.MongoClient,
 )
 app = FastAPI(title='example')
