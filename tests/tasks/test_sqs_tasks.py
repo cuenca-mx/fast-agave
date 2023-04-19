@@ -213,14 +213,17 @@ async def test_does_not_retry_on_unhandled_exceptions(sqs_client) -> None:
 @pytest.mark.asyncio
 async def test_retry_tasks_with_countdown(sqs_client) -> None:
     """
-    Este test prueba la lógica de reintentos con la configuración default,
-    es decir `max_retries=1`
+    Este test prueba la lógica de reintentos con un countdown,
+    es decir, se modifica el visibility timeout del mensaje para que pueda
+    simularse un delay en la recepción del mensaje por el siguiente
+    `receive_message`
 
     En este caso el task debe ejecutarse 2 veces
-    (la ejecución normal + max_retries)
+    (la ejecución normal + 1 intento), sin embargo,
+    después de ejecutarse por primera vez deben pasar aprox 2 segundos
+    para que se ejecute el segundo intento
 
-    Se ejecuta este número de veces para ser consistentes con la lógica
-    de reintentos de Celery
+    El parámetro es similar a `self.retry(exc, countdown=10)` en celery
     """
     test_message = dict(id='abc123', name='fast-agave')
 
