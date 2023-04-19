@@ -22,8 +22,14 @@ async def run_task(
     delete_message = True
     try:
         await coro
-    except RetryTask:
+    except RetryTask as exc:
         delete_message = message_receive_count >= max_retries + 1
+        if not delete_message and exc.countdown:
+            await sqs.change_message_visibility(
+                QueueUrl=queue_url,
+                ReceiptHandle=receipt_handle,
+                VisibilityTimeout=exc.countdown,
+            )
     finally:
         if delete_message:
             await sqs.delete_message(

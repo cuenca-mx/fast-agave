@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -52,5 +53,6 @@ class FastAgaveViewError(FastAgaveError):
     status_code: int = 500
 
 
+@dataclass
 class RetryTask(Exception):
-    ...
+    countdown: Optional[int] = None
