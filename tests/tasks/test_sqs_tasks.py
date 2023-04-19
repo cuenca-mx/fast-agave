@@ -221,7 +221,7 @@ async def test_retry_tasks_with_countdown(sqs_client) -> None:
     En este caso el task debe ejecutarse 2 veces
     (la ejecución normal + 1 intento), sin embargo,
     después de ejecutarse por primera vez deben pasar aprox 2 segundos
-    para que se ejecute el segundo intento
+    para que se ejecute el primer intento
 
     El parámetro es similar a `self.retry(exc, countdown=10)` en celery
     """
