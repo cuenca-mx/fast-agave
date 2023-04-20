@@ -24,7 +24,7 @@ async def run_task(
         await coro
     except RetryTask as retry:
         delete_message = message_receive_count >= max_retries + 1
-        if not delete_message and retry.countdown > 0:
+        if not delete_message and retry.countdown and retry.countdown > 0:
             await sqs.change_message_visibility(
                 QueueUrl=queue_url,
                 ReceiptHandle=receipt_handle,
