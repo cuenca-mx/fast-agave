@@ -1,4 +1,5 @@
 import asyncio
+import datetime as dt
 import json
 import uuid
 from unittest.mock import AsyncMock, call, patch
@@ -205,6 +206,47 @@ async def test_does_not_retry_on_unhandled_exceptions(sqs_client) -> None:
     async_mock_function.assert_called_with(test_message)
     assert async_mock_function.call_count == 1
 
+    resp = await sqs_client.receive_message()
+    assert 'Messages' not in resp
+
+
+@pytest.mark.asyncio
+async def test_retry_tasks_with_countdown(sqs_client) -> None:
+    """
+    Este test prueba la lógica de reintentos con un countdown,
+    es decir, se modifica el visibility timeout del mensaje para que pueda
+    simularse un delay en la recepción del mensaje por el siguiente
+    `receive_message`
+
+    En este caso el task debe ejecutarse 2 veces
+    (la ejecución normal + 1 intento), sin embargo,
+    después de ejecutarse por primera vez deben pasar aprox 2 segundos
+    para que se ejecute el primer intento
+
+    El parámetro es similar a `self.retry(exc, countdown=10)` en celery
+    """
+    test_message = dict(id='abc123', name='fast-agave')
+
+    await sqs_client.send_message(
+        MessageBody=json.dumps(test_message),
+        MessageGroupId='1234',
+    )
+
+    call_times = []
+
+    async def countdown_tester(_):
+        call_times.append(dt.datetime.now())
+        raise RetryTask(countdown=2)
+
+    await task(
+        queue_url=sqs_client.queue_url,
+        region_name=CORE_QUEUE_REGION,
+        wait_time_seconds=1,
+        visibility_timeout=1,
+    )(countdown_tester)()
+
+    assert len(call_times) == 2
+    assert call_times[1] - call_times[0] >= dt.timedelta(seconds=2)
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
 
