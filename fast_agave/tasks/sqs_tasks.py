@@ -1,5 +1,7 @@
 import asyncio
 import json
+import os
+import signal
 from functools import wraps
 from itertools import count
 from json import JSONDecodeError
@@ -9,6 +11,16 @@ from aiobotocore.httpsession import HTTPClientError
 from aiobotocore.session import get_session
 
 from ..exc import RetryTask
+
+STOP_CONSUMER = False
+
+
+def set_stop_consumer():
+    global STOP_CONSUMER
+    STOP_CONSUMER = True
+
+
+signal.signal(signal.SIGTERM, set_stop_consumer)
 
 
 async def run_task(
@@ -46,6 +58,9 @@ async def message_consumer(
     sqs,
 ) -> AsyncGenerator:
     for _ in count():
+        if STOP_CONSUMER:
+            break
+
         await can_read.wait()
         try:
             response = await sqs.receive_message(
