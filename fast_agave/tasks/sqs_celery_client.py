@@ -4,7 +4,8 @@ from dataclasses import dataclass, field
 from typing import Dict, Iterable, Optional
 from uuid import uuid4
 
-from aiobotocore.session import AioSession, get_session
+from aiobotocore.session import get_session
+from types_aiobotocore_sqs import SQSClient
 
 
 def _build_celery_message(
@@ -57,7 +58,7 @@ def _b64_encode(value: str) -> str:
 class SqsCeleryClient:
     queue_url: str
     region_name: str
-    _sqs: 'aiobotocore.client.SQS' = field(init=False)
+    _sqs: SQSClient = field(init=False)
 
     async def start(self):
         session = get_session()
