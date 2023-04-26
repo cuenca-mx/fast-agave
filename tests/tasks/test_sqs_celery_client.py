@@ -13,6 +13,7 @@ async def test_send_task(sqs_client) -> None:
     args = [10, 'foo']
     kwargs = dict(hola='mundo')
     queue = SqsCeleryClient(sqs_client.queue_url, CORE_QUEUE_REGION)
+    await queue.configure()
 
     await queue.send_task('some.task', args=args, kwargs=kwargs)
     sqs_message = await sqs_client.receive_message()
@@ -28,3 +29,4 @@ async def test_send_task(sqs_client) -> None:
     assert body_json[1] == kwargs
     assert message['headers']['lang'] == 'py'
     assert message['headers']['task'] == 'some.task'
+    await queue.close()
