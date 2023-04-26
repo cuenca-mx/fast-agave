@@ -59,7 +59,7 @@ class SqsCeleryClient:
     region_name: str
     _sqs: 'aiobotocore.client.SQS' = field(init=False)
 
-    async def configure(self):
+    async def start(self):
         session = get_session()
         context = session.create_client('sqs', self.region_name)
         self._sqs = await context.__aenter__()

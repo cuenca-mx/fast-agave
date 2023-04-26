@@ -13,7 +13,7 @@ async def test_send_task(sqs_client) -> None:
     args = [10, 'foo']
     kwargs = dict(hola='mundo')
     queue = SqsCeleryClient(sqs_client.queue_url, CORE_QUEUE_REGION)
-    await queue.configure()
+    await queue.start()
 
     await queue.send_task('some.task', args=args, kwargs=kwargs)
     sqs_message = await sqs_client.receive_message()
