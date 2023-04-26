@@ -1,10 +1,11 @@
 import json
 from base64 import b64encode
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Iterable, Optional
 from uuid import uuid4
 
 from aiobotocore.session import get_session
+from types_aiobotocore_sqs import SQSClient
 
 
 def _build_celery_message(
@@ -57,6 +58,15 @@ def _b64_encode(value: str) -> str:
 class SqsCeleryClient:
     queue_url: str
     region_name: str
+    _sqs: SQSClient = field(init=False)
+
+    async def start(self):
+        session = get_session()
+        context = session.create_client('sqs', self.region_name)
+        self._sqs = await context.__aenter__()
+
+    async def close(self):
+        await self._sqs.__aexit__(None, None, None)
 
     async def send_task(
         self,
@@ -65,10 +75,8 @@ class SqsCeleryClient:
         kwargs: Optional[Dict] = None,
     ) -> None:
         celery_message = _build_celery_message(name, args or (), kwargs or {})
-        session = get_session()
-        async with session.create_client('sqs', self.region_name) as sqs:
-            await sqs.send_message(
-                QueueUrl=self.queue_url,
-                MessageBody=celery_message,
-                MessageGroupId=str(uuid4()),
-            )
+        await self._sqs.send_message(
+            QueueUrl=self.queue_url,
+            MessageBody=celery_message,
+            MessageGroupId=str(uuid4()),
+        )
