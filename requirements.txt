@@ -1,7 +1,7 @@
 aiobotocore==2.1.0
 cuenca-validations==0.10.7
 fastapi==0.95.2
-mongoengine-plus==0.0.3
+mongoengine-plus==0.1.0
 python-multipart==0.0.5
 starlette-context==0.3.6
 types-aiobotocore-sqs==2.1.0.post1
