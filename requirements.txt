@@ -1,7 +1,8 @@
 aiobotocore==2.1.0
 cuenca-validations==0.10.7
-fastapi==0.96.0
+-e git+https://github.com/Kludex/fastapi.git@0fa8c6275e9d36ee8ae38429408279158c68db9e#egg=fastapi
 mongoengine-plus==0.1.0
 python-multipart==0.0.5
+starlette==0.28.0
 starlette-context==0.3.6
 types-aiobotocore-sqs==2.1.0.post1
