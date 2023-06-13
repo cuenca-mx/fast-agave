@@ -1,3 +1,4 @@
+import asyncio
 import json
 from base64 import b64encode
 from dataclasses import dataclass, field
@@ -59,10 +60,16 @@ class SqsCeleryClient:
     queue_url: str
     region_name: str
     _sqs: SQSClient = field(init=False)
+    _background_tasks: set = field(init=False)
+
+    @property
+    def background_tasks(self) -> set:
+        return self._background_tasks
 
     async def start(self):
         session = get_session()
         context = session.create_client('sqs', self.region_name)
+        self._background_tasks = set()
         self._sqs = await context.__aenter__()
 
     async def close(self):
@@ -80,3 +87,14 @@ class SqsCeleryClient:
             MessageBody=celery_message,
             MessageGroupId=str(uuid4()),
         )
+
+    def send_background_task(
+        self,
+        name: str,
+        args: Optional[Iterable] = None,
+        kwargs: Optional[Dict] = None,
+    ) -> asyncio.Task:
+        task = asyncio.create_task(self.send_task(name, args, kwargs))
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
