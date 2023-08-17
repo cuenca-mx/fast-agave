@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, Optional
 from uuid import uuid4
 
-
 from fast_agave.tasks.sqs_client import SqsClient
 
 
