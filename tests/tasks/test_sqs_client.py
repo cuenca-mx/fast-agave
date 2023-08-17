@@ -8,14 +8,13 @@ CORE_QUEUE_REGION = 'us-east-1'
 
 
 @pytest.mark.asyncio
-async def test_send_task(sqs_client) -> None:
-    queue = SqsClient(sqs_client.queue_url, CORE_QUEUE_REGION)
-    await queue.start()
-
+async def test_send_message(sqs_client) -> None:
     data1 = dict(hola='mundo')
     data2 = dict(foo='bar')
-    await queue.send_task(data1)
-    await queue.send_task(data2, message_group_id='12345')
+
+    async with SqsClient(sqs_client.queue_url, CORE_QUEUE_REGION) as sqs:
+        await sqs.send_message(data1)
+        await sqs.send_message(data2, message_group_id='12345')
 
     sqs_message = await sqs_client.receive_message()
     message = json.loads(sqs_message['Messages'][0]['Body'])
@@ -24,20 +23,17 @@ async def test_send_task(sqs_client) -> None:
     sqs_message = await sqs_client.receive_message()
     message = json.loads(sqs_message['Messages'][0]['Body'])
     assert message == data2
-    await queue.close()
 
 
 @pytest.mark.asyncio
-async def test_send_background_task(sqs_client) -> None:
-    queue = SqsClient(sqs_client.queue_url, CORE_QUEUE_REGION)
-    await queue.start()
-
+async def test_send_message_async(sqs_client) -> None:
     data1 = dict(hola='mundo')
 
-    task = queue.send_background_task(data1)
-    await task
+    async with SqsClient(sqs_client.queue_url, CORE_QUEUE_REGION) as sqs:
+        task = sqs.send_message_async(data1)
+        await task
+
     sqs_message = await sqs_client.receive_message()
     message = json.loads(sqs_message['Messages'][0]['Body'])
-    assert message == data1
 
-    await queue.close()
+    assert message == data1
