@@ -10,7 +10,11 @@ from aiobotocore.httpsession import HTTPClientError
 from pydantic import BaseModel
 
 from fast_agave.exc import RetryTask
-from fast_agave.tasks.sqs_tasks import get_running_fast_agave_tasks, task
+from fast_agave.tasks.sqs_tasks import (
+    BACKGROUND_TASKS,
+    get_running_fast_agave_tasks,
+    task,
+)
 
 CORE_QUEUE_REGION = 'us-east-1'
 
@@ -40,6 +44,7 @@ async def test_execute_tasks(sqs_client) -> None:
 
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
 
 
 @pytest.mark.asyncio
@@ -79,6 +84,7 @@ async def test_execute_tasks_validator(sqs_client) -> None:
 
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
 
 
 @pytest.mark.asyncio
@@ -97,6 +103,7 @@ async def test_not_execute_tasks(sqs_client) -> None:
     async_mock_function.assert_not_called()
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
 
 
 @pytest.mark.asyncio
@@ -214,6 +221,7 @@ async def test_retry_tasks_custom_max_retries(sqs_client) -> None:
 
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
 
 
 @pytest.mark.asyncio
@@ -248,6 +256,7 @@ async def test_does_not_retry_on_unhandled_exceptions(sqs_client) -> None:
 
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
 
 
 @pytest.mark.asyncio

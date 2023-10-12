@@ -14,6 +14,8 @@ from ..exc import RetryTask
 
 AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', '')
 
+BACKGROUND_TASKS = set()
+
 
 async def run_task(
     task_func: Callable,
@@ -122,7 +124,7 @@ def task(
                     message_receive_count = int(
                         message['Attributes']['ApproximateReceiveCount']
                     )
-                    asyncio.create_task(
+                    bg_task = asyncio.create_task(
                         concurrency_controller(
                             run_task(
                                 task_func,
@@ -137,6 +139,8 @@ def task(
                         ),
                         name='fast-agave-task',
                     )
+                    BACKGROUND_TASKS.add(bg_task)
+                    bg_task.add_done_callback(BACKGROUND_TASKS.discard)
 
                 # Espera a que terminen todos los tasks pendientes creados por
                 # `asyncio.create_task`. De esta forma los tasks
