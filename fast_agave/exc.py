@@ -56,3 +56,8 @@ class FastAgaveViewError(FastAgaveError):
 @dataclass
 class RetryTask(Exception):
     countdown: Optional[int] = None
+
+
+@dataclass
+class TaskDefinitionError(Exception):
+    error: str
