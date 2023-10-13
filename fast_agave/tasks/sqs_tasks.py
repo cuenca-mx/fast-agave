@@ -8,7 +8,7 @@ from typing import AsyncGenerator, Callable, Coroutine
 
 from aiobotocore.httpsession import HTTPClientError
 from aiobotocore.session import get_session
-from pydantic import BaseModel, validate_arguments
+from pydantic import validate_arguments
 
 from ..exc import RetryTask
 
