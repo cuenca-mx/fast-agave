@@ -381,21 +381,19 @@ async def test_concurrency_controller(
     sqs_client,
 ) -> None:
     message_id = str(uuid.uuid4())
-    test_message = dict(id=message_id, name='fast-agave')
+    test_message = dict(id='message_id', name='fast-agave')
     for i in range(5):
         await sqs_client.send_message(
             MessageBody=json.dumps(test_message),
             MessageGroupId=message_id,
         )
 
-    max_running_tasks = 0
+    async_mock_function = AsyncMock()
 
-    async def task_counter(_: Dict) -> None:
-        nonlocal max_running_tasks
+    async def task_counter(data: Dict) -> None:
         await asyncio.sleep(1)
         running_tasks = len(await get_running_fast_agave_tasks())
-        if running_tasks > max_running_tasks:
-            max_running_tasks = running_tasks
+        await async_mock_function(running_tasks)
 
     await task(
         queue_url=sqs_client.queue_url,
@@ -406,4 +404,5 @@ async def test_concurrency_controller(
         max_concurrent_tasks=2,
     )(task_counter)()
 
-    assert max_running_tasks == 2
+    running_tasks = [call[0] for call, _ in async_mock_function.call_args_list]
+    assert max(running_tasks) == 2

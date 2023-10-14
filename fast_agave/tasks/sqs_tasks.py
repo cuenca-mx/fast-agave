@@ -28,6 +28,7 @@ async def run_task(
 ) -> None:
     delete_message = True
     try:
+        # breakpoint()
         await task_func(body)
     except RetryTask as retry:
         delete_message = message_receive_count >= max_retries + 1
