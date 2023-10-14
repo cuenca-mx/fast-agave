@@ -381,7 +381,7 @@ async def test_concurrency_controller(
     sqs_client,
 ) -> None:
     message_id = str(uuid.uuid4())
-    test_message = dict(id='message_id', name='fast-agave')
+    test_message = dict(id=message_id, name='fast-agave')
     for i in range(5):
         await sqs_client.send_message(
             MessageBody=json.dumps(test_message),
