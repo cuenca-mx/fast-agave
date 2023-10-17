@@ -4,11 +4,11 @@ import os
 from functools import wraps
 from itertools import count
 from json import JSONDecodeError
-from typing import AsyncGenerator, Callable, Coroutine, Optional, Type
+from typing import AsyncGenerator, Callable, Coroutine
 
 from aiobotocore.httpsession import HTTPClientError
 from aiobotocore.session import get_session
-from pydantic import BaseModel
+from pydantic import validate_arguments
 
 from ..exc import RetryTask
 
@@ -25,12 +25,10 @@ async def run_task(
     receipt_handle: str,
     message_receive_count: int,
     max_retries: int,
-    validator: Optional[Type[BaseModel]] = None,
 ) -> None:
     delete_message = True
     try:
-        data = validator(**body) if validator else body
-        await task_func(data)
+        await task_func(body)
     except RetryTask as retry:
         delete_message = message_receive_count >= max_retries + 1
         if not delete_message and retry.countdown and retry.countdown > 0:
@@ -88,7 +86,6 @@ def task(
     visibility_timeout: int = 3600,
     max_retries: int = 1,
     max_concurrent_tasks: int = 5,
-    validator: Optional[Type[BaseModel]] = None,
 ):
     def task_builder(task_func: Callable):
         @wraps(task_func)
@@ -108,6 +105,9 @@ def task(
                         can_read.set()
 
             session = get_session()
+
+            task_with_validators = validate_arguments(task_func)
+
             async with session.create_client('sqs', region_name) as sqs:
                 async for message in message_consumer(
                     queue_url,
@@ -127,14 +127,13 @@ def task(
                     bg_task = asyncio.create_task(
                         concurrency_controller(
                             run_task(
-                                task_func,
+                                task_with_validators,
                                 body,
                                 sqs,
                                 queue_url,
                                 message['ReceiptHandle'],
                                 message_receive_count,
                                 max_retries,
-                                validator,
                             ),
                         ),
                         name='fast-agave-task',
