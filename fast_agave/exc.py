@@ -55,7 +55,7 @@ class FastAgaveViewError(FastAgaveError):
 
 @dataclass
 class ServiceUnavailableError(FastAgaveError):
-    status_code = 503
+    status_code: int = 503
 
 
 @dataclass
