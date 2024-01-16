@@ -54,5 +54,10 @@ class FastAgaveViewError(FastAgaveError):
 
 
 @dataclass
+class ServiceUnavailableError(FastAgaveError):
+    status_code = 503
+
+
+@dataclass
 class RetryTask(Exception):
     countdown: Optional[int] = None
