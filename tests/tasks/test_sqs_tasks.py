@@ -2,6 +2,7 @@ import asyncio
 import datetime as dt
 import json
 import uuid
+from typing import Dict, Union
 from unittest.mock import AsyncMock, call, patch
 
 import aiobotocore.client
@@ -10,7 +11,11 @@ from aiobotocore.httpsession import HTTPClientError
 from pydantic import BaseModel
 
 from fast_agave.exc import RetryTask
-from fast_agave.tasks.sqs_tasks import get_running_fast_agave_tasks, task
+from fast_agave.tasks.sqs_tasks import (
+    BACKGROUND_TASKS,
+    get_running_fast_agave_tasks,
+    task,
+)
 
 CORE_QUEUE_REGION = 'us-east-1'
 
@@ -28,41 +33,48 @@ async def test_execute_tasks(sqs_client) -> None:
         MessageGroupId='1234',
     )
 
-    async_mock_function = AsyncMock(return_value=None)
+    async_mock_function = AsyncMock()
+
+    async def my_task(data: Dict) -> None:
+        await async_mock_function(data)
+
     await task(
         queue_url=sqs_client.queue_url,
         region_name=CORE_QUEUE_REGION,
         wait_time_seconds=1,
         visibility_timeout=1,
-    )(async_mock_function)()
+    )(my_task)()
     async_mock_function.assert_called_with(test_message)
     assert async_mock_function.call_count == 1
 
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
 
 
 @pytest.mark.asyncio
-async def test_execute_tasks_validator(sqs_client) -> None:
-    async_mock_function = AsyncMock(return_value=None)
-
+async def test_execute_tasks_with_validator(sqs_client) -> None:
     class Validator(BaseModel):
         id: str
         name: str
+
+    async_mock_function = AsyncMock(return_value=None)
+
+    async def my_task(data: Validator) -> None:
+        await async_mock_function(data)
 
     task_params = dict(
         queue_url=sqs_client.queue_url,
         region_name=CORE_QUEUE_REGION,
         wait_time_seconds=1,
         visibility_timeout=1,
-        validator=Validator,
     )
     # Invalid body, not execute function
     await sqs_client.send_message(
         MessageBody=json.dumps(dict(foo='bar')),
         MessageGroupId='4321',
     )
-    await task(**task_params)(async_mock_function)()
+    await task(**task_params)(my_task)()
     assert async_mock_function.call_count == 0
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
@@ -73,12 +85,65 @@ async def test_execute_tasks_validator(sqs_client) -> None:
         MessageBody=test_message.json(),
         MessageGroupId='1234',
     )
-    await task(**task_params)(async_mock_function)()
+    await task(**task_params)(my_task)()
     async_mock_function.assert_called_with(test_message)
     assert async_mock_function.call_count == 1
 
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
+
+
+@pytest.mark.asyncio
+async def test_execute_tasks_with_union_validator(sqs_client) -> None:
+    class User(BaseModel):
+        id: str
+        name: str
+
+    class Company(BaseModel):
+        id: str
+        legal_name: str
+        rfc: str
+
+    async_mock_function = AsyncMock(return_value=None)
+
+    async def my_task(data: Union[User, Company]) -> None:
+        await async_mock_function(data)
+
+    task_params = dict(
+        queue_url=sqs_client.queue_url,
+        region_name=CORE_QUEUE_REGION,
+        wait_time_seconds=1,
+        visibility_timeout=1,
+    )
+    # Invalid body, not execute function
+    test_message = dict(id='ID123', name='Sor Juana Inés de la Cruz')
+    await sqs_client.send_message(
+        MessageBody=json.dumps(test_message),
+        MessageGroupId='4321',
+    )
+    await task(**task_params)(my_task)()
+    async_mock_function.assert_called_with(test_message)
+    assert async_mock_function.call_count == 1
+
+    resp = await sqs_client.receive_message()
+    assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
+
+    async_mock_function.reset_mock()
+    test_message = dict(id='ID123', legal_name='FastAgave', rfc='FA')
+
+    await sqs_client.send_message(
+        MessageBody=json.dumps(test_message),
+        MessageGroupId='54321',
+    )
+    await task(**task_params)(my_task)()
+    async_mock_function.assert_called_with(test_message)
+    assert async_mock_function.call_count == 1
+
+    resp = await sqs_client.receive_message()
+    assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
 
 
 @pytest.mark.asyncio
@@ -86,17 +151,22 @@ async def test_not_execute_tasks(sqs_client) -> None:
     """
     Este caso es cuando el queue está vacío. No hay nada que ejecutar
     """
-    async_mock_function = AsyncMock(return_value=None)
+    async_mock_function = AsyncMock()
+
+    async def my_task(data: Dict) -> None:
+        await async_mock_function(data)
+
     # No escribimos un mensaje en el queue
     await task(
         queue_url=sqs_client.queue_url,
         region_name=CORE_QUEUE_REGION,
         wait_time_seconds=1,
         visibility_timeout=1,
-    )(async_mock_function)()
+    )(my_task)()
     async_mock_function.assert_not_called()
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
 
 
 @pytest.mark.asyncio
@@ -134,6 +204,10 @@ async def test_http_client_error_tasks(sqs_client) -> None:
         return client
 
     async_mock_function = AsyncMock(return_value=None)
+
+    async def my_task(data: Dict) -> None:
+        await async_mock_function(data)
+
     with patch(
         'aiobotocore.client.AioClientCreator.create_client', mock_create_client
     ):
@@ -143,7 +217,7 @@ async def test_http_client_error_tasks(sqs_client) -> None:
             wait_time_seconds=1,
             visibility_timeout=3,
             max_retries=1,
-        )(async_mock_function)()
+        )(my_task)()
         async_mock_function.assert_called_once()
 
 
@@ -168,12 +242,15 @@ async def test_retry_tasks_default_max_retries(sqs_client) -> None:
 
     async_mock_function = AsyncMock(side_effect=RetryTask)
 
+    async def my_task(data: Dict) -> None:
+        await async_mock_function(data)
+
     await task(
         queue_url=sqs_client.queue_url,
         region_name=CORE_QUEUE_REGION,
         wait_time_seconds=1,
         visibility_timeout=1,
-    )(async_mock_function)()
+    )(my_task)()
 
     expected_calls = [call(test_message)] * 2
     async_mock_function.assert_has_calls(expected_calls)
@@ -200,13 +277,16 @@ async def test_retry_tasks_custom_max_retries(sqs_client) -> None:
 
     async_mock_function = AsyncMock(side_effect=RetryTask)
 
+    async def my_task(data: Dict) -> None:
+        await async_mock_function(data)
+
     await task(
         queue_url=sqs_client.queue_url,
         region_name=CORE_QUEUE_REGION,
         wait_time_seconds=1,
         visibility_timeout=1,
         max_retries=3,
-    )(async_mock_function)()
+    )(my_task)()
 
     expected_calls = [call(test_message)] * 4
     async_mock_function.assert_has_calls(expected_calls)
@@ -214,6 +294,7 @@ async def test_retry_tasks_custom_max_retries(sqs_client) -> None:
 
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
 
 
 @pytest.mark.asyncio
@@ -235,19 +316,23 @@ async def test_does_not_retry_on_unhandled_exceptions(sqs_client) -> None:
         side_effect=Exception('something went wrong :(')
     )
 
+    async def my_task(data: Dict) -> None:
+        await async_mock_function(data)
+
     await task(
         queue_url=sqs_client.queue_url,
         region_name=CORE_QUEUE_REGION,
         wait_time_seconds=1,
         visibility_timeout=1,
         max_retries=3,
-    )(async_mock_function)()
+    )(my_task)()
 
     async_mock_function.assert_called_with(test_message)
     assert async_mock_function.call_count == 1
 
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
 
 
 @pytest.mark.asyncio
@@ -272,11 +357,10 @@ async def test_retry_tasks_with_countdown(sqs_client) -> None:
         MessageGroupId='1234',
     )
 
-    call_times = []
+    async_mock_function = AsyncMock(side_effect=RetryTask(countdown=2))
 
-    async def countdown_tester(_):
-        call_times.append(dt.datetime.now())
-        raise RetryTask(countdown=2)
+    async def countdown_tester(data: Dict):
+        await async_mock_function(data, dt.datetime.now())
 
     await task(
         queue_url=sqs_client.queue_url,
@@ -285,7 +369,8 @@ async def test_retry_tasks_with_countdown(sqs_client) -> None:
         visibility_timeout=1,
     )(countdown_tester)()
 
-    assert len(call_times) == 2
+    call_times = [arg[1] for arg, _ in async_mock_function.call_args_list]
+    assert async_mock_function.call_count == 2
     assert call_times[1] - call_times[0] >= dt.timedelta(seconds=2)
     resp = await sqs_client.receive_message()
     assert 'Messages' not in resp
@@ -303,14 +388,12 @@ async def test_concurrency_controller(
             MessageGroupId=message_id,
         )
 
-    max_running_tasks = 0
+    async_mock_function = AsyncMock()
 
-    async def task_counter(_) -> None:
-        nonlocal max_running_tasks
+    async def task_counter(data: Dict) -> None:
         await asyncio.sleep(1)
         running_tasks = len(await get_running_fast_agave_tasks())
-        if running_tasks > max_running_tasks:
-            max_running_tasks = running_tasks
+        await async_mock_function(running_tasks)
 
     await task(
         queue_url=sqs_client.queue_url,
@@ -321,4 +404,5 @@ async def test_concurrency_controller(
         max_concurrent_tasks=2,
     )(task_counter)()
 
-    assert max_running_tasks == 2
+    running_tasks = [call[0] for call, _ in async_mock_function.call_args_list]
+    assert max(running_tasks) == 2
