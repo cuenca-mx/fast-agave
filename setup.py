@@ -26,7 +26,7 @@ setup(
         'aiobotocore>=1.0.0,<3.0.0',
         'types-aiobotocore-sqs>=2.1.0.post1,<3.0.0',
         'cuenca-validations>=0.9.4,<1.0.0',
-        'fastapi>=0.63.0,<0.69.0',
+        'fastapi>=0.63.0,<0.105.0',
         'mongoengine-plus>=0.0.2,<1.0.0',
         'starlette-context>=0.3.2,<0.4.0',
     ],
