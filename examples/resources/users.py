@@ -1,12 +1,9 @@
-from typing import cast
-
 from fast_agave.filters import generic_query
 from ..models import User as UserModel
 from ..validators import UserQuery, UserUpdateRequest
 from .base import app
 from fastapi.responses import JSONResponse as Response
 from fastapi import Request
-from starlette.datastructures import Address
 
 
 @app.resource('/users')
@@ -21,6 +18,7 @@ class User:
         user: UserModel, request: UserUpdateRequest, api_request: Request
     ) -> Response:
         user.name = request.name
-        user.ip = cast(Address, api_request.client).host
+        assert api_request.client  # Only for mypy, client is optional
+        user.ip = api_request.client.host
         await user.async_save()
         return Response(content=user.to_dict(), status_code=200)

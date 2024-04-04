@@ -14,12 +14,12 @@ def health_auth_check() -> Dict:
 
 
 @app.get('/raise_cuenca_errors')
-def raise_cuenca_errors() -> None:
+def raise_cuenca_errors() -> NoReturn:
     raise WrongCredsError('you are not lucky enough!')
 
 
 @app.get('/raise_fast_agave_errors')
-def raise_fast_agave_errors() -> None:
+def raise_fast_agave_errors() -> NoReturn:
     raise UnauthorizedError('nice try!')
 
 
