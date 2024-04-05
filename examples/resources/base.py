@@ -1,4 +1,4 @@
-from typing import Dict, NoReturn
+from typing import Dict
 
 from cuenca_validations.errors import WrongCredsError
 
@@ -14,12 +14,12 @@ def health_auth_check() -> Dict:
 
 
 @app.get('/raise_cuenca_errors')
-def raise_cuenca_errors() -> NoReturn:
+def raise_cuenca_errors() -> None:
     raise WrongCredsError('you are not lucky enough!')
 
 
 @app.get('/raise_fast_agave_errors')
-def raise_fast_agave_errors() -> NoReturn:
+def raise_fast_agave_errors() -> None:
     raise UnauthorizedError('nice try!')
 
 

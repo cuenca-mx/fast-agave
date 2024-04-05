@@ -18,6 +18,7 @@ class User:
         user: UserModel, request: UserUpdateRequest, api_request: Request
     ) -> Response:
         user.name = request.name
+        assert api_request.client  # Only for mypy, client is optional
         user.ip = api_request.client.host
         await user.async_save()
         return Response(content=user.to_dict(), status_code=200)
