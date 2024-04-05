@@ -29,7 +29,7 @@ setup(
         'fastapi>=0.63.0,<1.0.0',
         'httpx>=0.19.0,<1.0.0',
         'mongoengine-plus>=0.1.2,<1.0.0',
-        'starlette>=0.14.2,<0.28.0',
+        'starlette>=0.14.2,<1.0.0',
         'starlette-context>=0.3.2,<0.4.0',
         'uvicorn>=0.29.0,<1.0.0',
     ],
