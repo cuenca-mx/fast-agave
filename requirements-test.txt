@@ -1,4 +1,4 @@
-black==22.3.0
+black==24.3.0
 flake8==4.0.*
 isort==5.10.*
 mock==4.0.3
@@ -9,6 +9,6 @@ pytest==7.4.*
 pytest-cov==4.1.*
 pytest-vcr==1.0.*
 pytest-asyncio==0.15.*
-requests==2.28.*
+requests==2.32.*
 boto3==1.20.24
 botocore==1.23.24
