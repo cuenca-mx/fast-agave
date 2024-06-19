@@ -13,12 +13,12 @@ def health_auth_check() -> Dict:
     return dict(greeting="I'm authenticated and healthy !!!")
 
 
-@app.get('/raise_cuenca_errors')
+@app.get('/raise_cuenca_errors', response_model=None)
 def raise_cuenca_errors() -> NoReturn:
     raise WrongCredsError('you are not lucky enough!')
 
 
-@app.get('/raise_fast_agave_errors')
+@app.get('/raise_fast_agave_errors', response_model=None)
 def raise_fast_agave_errors() -> NoReturn:
     raise UnauthorizedError('nice try!')
 
