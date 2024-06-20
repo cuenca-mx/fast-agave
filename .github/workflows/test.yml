@@ -46,7 +46,8 @@ jobs:
         run: pytest --cov-report=xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3.1.4
-        with:
+        with: 
+          token: b1c643cb-040e-4c87-9f7d-5129d97daac0
           file: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
