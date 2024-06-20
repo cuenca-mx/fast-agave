@@ -18,6 +18,7 @@ class User:
         user: UserModel, request: UserUpdateRequest, api_request: Request
     ) -> Response:
         user.name = request.name
-        user.ip = api_request.client.host
+        if api_request.client is not None:
+            user.ip = api_request.client.host
         await user.async_save()
         return Response(content=user.to_dict(), status_code=200)

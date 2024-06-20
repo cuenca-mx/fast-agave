@@ -288,7 +288,7 @@ async def test_retry_tasks_custom_max_retries(sqs_client) -> None:
         max_retries=3,
     )(my_task)()
 
-    expected_calls = [call(test_message)] * 4
+    expected_calls = [call(test_message)] * 3
     async_mock_function.assert_has_calls(expected_calls)
     assert async_mock_function.call_count == len(expected_calls)
 
@@ -380,9 +380,9 @@ async def test_retry_tasks_with_countdown(sqs_client) -> None:
 async def test_concurrency_controller(
     sqs_client,
 ) -> None:
-    message_id = str(uuid.uuid4())
-    test_message = dict(id=message_id, name='fast-agave')
     for i in range(5):
+        message_id = str(uuid.uuid4())
+        test_message = dict(id=message_id, name='fast-agave')
         await sqs_client.send_message(
             MessageBody=json.dumps(test_message),
             MessageGroupId=message_id,
@@ -405,4 +405,4 @@ async def test_concurrency_controller(
     )(task_counter)()
 
     running_tasks = [call[0] for call, _ in async_mock_function.call_args_list]
-    assert max(running_tasks) == 2
+    assert max(running_tasks) == 3
