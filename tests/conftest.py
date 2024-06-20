@@ -185,7 +185,13 @@ def aws_credentials() -> None:
 def aws_endpoint_urls(
     aws_credentials,
 ) -> Generator[Dict[str, str], None, None]:
-    sqs = subprocess.Popen(['moto_server', 'sqs', '-p', '4000'])
+    sqs = subprocess.Popen(
+        [
+            'moto_server',
+            '-p',
+            '4000',
+        ]
+    )
 
     endpoints = dict(
         sqs='http://127.0.0.1:4000/',
@@ -222,7 +228,11 @@ async def sqs_client():
     session = aiobotocore.session.get_session()
     async with session.create_client('sqs', 'us-east-1') as sqs:
         await sqs.create_queue(
-            QueueName='core.fifo', Attributes={'FifoQueue': 'true'}
+            QueueName='core.fifo',
+            Attributes={
+                'FifoQueue': 'true',
+                'ContentBasedDeduplication': 'true',
+            },
         )
         resp = await sqs.get_queue_url(QueueName='core.fifo')
         sqs.send_message = partial(sqs.send_message, QueueUrl=resp['QueueUrl'])

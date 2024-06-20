@@ -3,7 +3,7 @@ flake8==4.0.*
 isort==5.10.*
 mock==4.0.3
 mongomock==4.1.*
-moto[server]==5.0.9
+moto[server,sqs]==5.0.9
 mypy==1.0.1
 pytest==7.4.*
 pytest-cov==4.1.*
