@@ -8,7 +8,7 @@ from typing import AsyncGenerator, Callable, Coroutine
 
 from aiobotocore.httpsession import HTTPClientError
 from aiobotocore.session import get_session
-from pydantic import validate_arguments
+from pydantic import validate_call
 
 from ..exc import RetryTask
 
@@ -106,7 +106,7 @@ def task(
 
             session = get_session()
 
-            task_with_validators = validate_arguments(task_func)
+            task_with_validators = validate_call(task_func)
 
             async with session.create_client('sqs', region_name) as sqs:
                 async for message in message_consumer(

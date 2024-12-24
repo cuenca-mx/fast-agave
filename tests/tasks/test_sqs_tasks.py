@@ -108,7 +108,7 @@ async def test_execute_tasks_with_union_validator(sqs_client) -> None:
     async_mock_function = AsyncMock(return_value=None)
 
     async def my_task(data: Union[User, Company]) -> None:
-        await async_mock_function(data)
+        await async_mock_function(data.model_dump())
 
     task_params = dict(
         queue_url=sqs_client.queue_url,
@@ -406,3 +406,36 @@ async def test_concurrency_controller(
 
     running_tasks = [call[0] for call, _ in async_mock_function.call_args_list]
     assert max(running_tasks) == 2
+
+
+@pytest.mark.asyncio
+async def test_invalid_json_message(sqs_client) -> None:
+    """
+    Este test verifica que los mensajes con JSON inválido son ignorados
+    y el mensaje es eliminado del queue sin ejecutar el task
+    """
+    # Enviamos un mensaje con JSON inválido
+    await sqs_client.send_message(
+        MessageBody='{invalid_json',
+        MessageGroupId='1234',
+    )
+
+    async_mock_function = AsyncMock()
+
+    async def my_task(data: Dict) -> None:
+        await async_mock_function(data)
+
+    await task(
+        queue_url=sqs_client.queue_url,
+        region_name=CORE_QUEUE_REGION,
+        wait_time_seconds=1,
+        visibility_timeout=1,
+    )(my_task)()
+
+    # Verificamos que el task nunca fue ejecutado
+    async_mock_function.assert_not_called()
+
+    # Verificamos que el mensaje fue eliminado del queue
+    resp = await sqs_client.receive_message()
+    assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
