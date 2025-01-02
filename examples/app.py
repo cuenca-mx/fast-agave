@@ -18,7 +18,7 @@ app = FastAPI(title='example')
 app.include_router(resources)
 
 app.add_middleware(AuthedMiddleware)
-app.add_middleware(FastAgaveErrorHandler)
+app.add_middleware(FastAgaveErrorHandler)  # type: ignore
 
 
 @app.get('/')

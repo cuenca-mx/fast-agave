@@ -230,7 +230,7 @@ class RestApiBlueprint(APIRouter):
                         file,
                         media_type=mimetype,
                         headers={
-                            'Content-Disposition': f'attachment; filename={filename}'
+                            'Content-Disposition': f'attachment; filename={filename}'  # noqa: E702
                         },
                     )
                 elif hasattr(cls, 'retrieve'):
@@ -254,9 +254,9 @@ class RestApiBlueprint(APIRouter):
                 return cls
 
             query_description = (
-                f'Make queries in resource {cls.__name__} and filter the result using query parameters.  \n'
-                f'The items are paginated, to iterate over them use the `next_page_uri` included in response.  \n'
-                f'If you need only a counter not the data send value `true` in `count` param.'
+                f"Make queries in resource {cls.__name__} and filter the result using query parameters.  \n"
+                f"The items are paginated, to iterate over them use the 'next_page_uri' included in response.  \n"
+                f"If you need only a counter not the data send value 'true' in 'count' param."
             )
 
             # Build dynamically types for query response
