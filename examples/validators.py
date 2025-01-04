@@ -1,7 +1,7 @@
 from typing import Optional
 
 from cuenca_validations.types import QueryParams
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import datetime as dt
 
 
@@ -26,6 +26,13 @@ class UserQuery(QueryParams):
 
 class AccountRequest(BaseModel):
     name: str
+    model_config = ConfigDict(
+        json_schema_extra={
+            'example': {
+                'name': 'Doroteo Arango',
+            }
+        }
+    )
 
 
 class AccountResponse(BaseModel):
