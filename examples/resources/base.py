@@ -1,5 +1,3 @@
-from typing import Dict, NoReturn
-
 from cuenca_validations.errors import WrongCredsError
 
 from fast_agave.blueprints import RestApiBlueprint
@@ -9,7 +7,7 @@ app = RestApiBlueprint()
 
 
 @app.get('/healthy_auth')
-def health_auth_check() -> Dict:
+def health_auth_check() -> dict:
     return dict(greeting="I'm authenticated and healthy !!!")
 
 
