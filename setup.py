@@ -23,12 +23,12 @@ setup(
     package_data=dict(agave=['py.typed']),
     python_requires='>=3.9',
     install_requires=[
-        'aiobotocore==2.16.1',
-        'types-aiobotocore-sqs==2.5.0',
-        'cuenca-validations==2.0.0.dev9',
-        'fastapi==0.115.6',
-        'mongoengine-plus==0.2.3.dev1',
-        'starlette-context==0.3.3',
+        'aiobotocore>=2.0.0,<3.0.0',
+        'types-aiobotocore-sqs>=2.1.0,<3.0.0',
+        'cuenca-validations>=2.0.0,<3.0.0',
+        'fastapi>=0.115.0,<0.120.0',
+        'mongoengine-plus>=0.2.3,<1.0.0',
+        'starlette-context>=0.3.2,<0.4.0',
     ],
     classifiers=[
         'Programming Language :: Python :: 3.9',
