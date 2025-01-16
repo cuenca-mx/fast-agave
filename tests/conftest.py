@@ -11,6 +11,7 @@ from _pytest.monkeypatch import MonkeyPatch
 from aiobotocore.session import AioSession
 from fastapi.testclient import TestClient
 from mongoengine import Document
+from moto.server import ThreadedMotoServer
 
 from examples.app import app
 from examples.config import (
@@ -184,7 +185,6 @@ def aws_credentials() -> None:
 def aws_endpoint_urls(
     aws_credentials,
 ) -> Generator[dict[str, str], None, None]:
-    from moto.server import ThreadedMotoServer
 
     server = ThreadedMotoServer(port=4000)
     server.start()
