@@ -1,9 +1,9 @@
 SHELL := bash
 PATH := ./venv/bin:${PATH}
-PYTHON = python3.8
+PYTHON = python3.13
 PROJECT = fast_agave
 isort = isort $(PROJECT) tests setup.py
-black = black -S -l 79 --target-version py38 $(PROJECT) tests setup.py examples
+black = black -S -l 79 --target-version py313 $(PROJECT) tests setup.py examples
 
 
 .PHONY: all

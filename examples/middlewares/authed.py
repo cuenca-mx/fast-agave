@@ -14,6 +14,17 @@ from examples.config import (
 
 
 class AuthedMiddleware(ContextMiddleware):
+    def __init__(
+        self, app, plugins=None, default_error_response=None, *args, **kwargs
+    ):
+        super().__init__(
+            app=app,
+            plugins=plugins,
+            default_error_response=default_error_response,
+            *args,
+            **kwargs,
+        )
+
     def required_user_id(self) -> bool:
         """
         Example method so we can easily mock it in tests environment

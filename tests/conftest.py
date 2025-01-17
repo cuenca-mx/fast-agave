@@ -1,9 +1,8 @@
 import datetime as dt
 import functools
 import os
-import subprocess
 from functools import partial
-from typing import Callable, Dict, Generator, List
+from typing import Callable, Generator
 
 import aiobotocore
 import boto3
@@ -12,6 +11,7 @@ from _pytest.monkeypatch import MonkeyPatch
 from aiobotocore.session import AioSession
 from fastapi.testclient import TestClient
 from mongoengine import Document
+from moto.server import ThreadedMotoServer
 
 from examples.app import app
 from examples.config import (
@@ -29,7 +29,7 @@ FuncDecorator = Callable[..., Generator]
 def collection_fixture(model: Document) -> Callable[..., FuncDecorator]:
     def collection_decorator(func: Callable) -> FuncDecorator:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Generator[List, None, None]:
+        def wrapper(*args, **kwargs) -> Generator[list, None, None]:
             items = func(*args, **kwargs)
             for item in items:
                 item.save()
@@ -49,7 +49,7 @@ def client() -> Generator[TestClient, None, None]:
 
 @pytest.fixture
 @collection_fixture(Account)
-def accounts() -> List[Account]:
+def accounts() -> list[Account]:
     return [
         Account(
             name='Frida Kahlo',
@@ -91,23 +91,23 @@ def accounts() -> List[Account]:
 
 
 @pytest.fixture
-def account(accounts: List[Account]) -> Generator[Account, None, None]:
+def account(accounts: list[Account]) -> Generator[Account, None, None]:
     yield accounts[0]
 
 
 @pytest.fixture
-def user(users: List[User]) -> Generator[User, None, None]:
+def user(users: list[User]) -> Generator[User, None, None]:
     yield users[0]
 
 
 @pytest.fixture
-def other_account(accounts: List[Account]) -> Generator[Account, None, None]:
+def other_account(accounts: list[Account]) -> Generator[Account, None, None]:
     yield accounts[-1]
 
 
 @pytest.fixture
 @collection_fixture(File)
-def files() -> List[File]:
+def files() -> list[File]:
     return [
         File(
             name='Frida Kahlo',
@@ -117,13 +117,13 @@ def files() -> List[File]:
 
 
 @pytest.fixture
-def file(files: List[File]) -> Generator[File, None, None]:
+def file(files: list[File]) -> Generator[File, None, None]:
     yield files[0]
 
 
 @pytest.fixture
 @collection_fixture(Card)
-def cards() -> List[Card]:
+def cards() -> list[Card]:
     return [
         Card(
             number='5434000000000001',
@@ -149,13 +149,13 @@ def cards() -> List[Card]:
 
 
 @pytest.fixture
-def card(cards: List[Card]) -> Generator[Card, None, None]:
+def card(cards: list[Card]) -> Generator[Card, None, None]:
     yield cards[0]
 
 
 @pytest.fixture
 @collection_fixture(User)
-def users() -> List[User]:
+def users() -> list[User]:
     return [
         User(name='User1', platform_id=TEST_DEFAULT_PLATFORM_ID),
         User(name='User2', platform_id=TEST_SECOND_PLATFORM_ID),
@@ -164,7 +164,7 @@ def users() -> List[User]:
 
 @pytest.fixture
 @collection_fixture(Biller)
-def billers() -> List[Biller]:
+def billers() -> list[Biller]:
     return [
         Biller(name='Telcel'),
         Biller(name='ATT'),
@@ -184,14 +184,17 @@ def aws_credentials() -> None:
 @pytest.fixture(scope='session')
 def aws_endpoint_urls(
     aws_credentials,
-) -> Generator[Dict[str, str], None, None]:
-    sqs = subprocess.Popen(['moto_server', 'sqs', '-p', '4000'])
+) -> Generator[dict[str, str], None, None]:
+
+    server = ThreadedMotoServer(port=4000)
+    server.start()
 
     endpoints = dict(
         sqs='http://127.0.0.1:4000/',
     )
     yield endpoints
-    sqs.kill()
+
+    server.stop()
 
 
 @pytest.fixture(autouse=True)
@@ -222,7 +225,11 @@ async def sqs_client():
     session = aiobotocore.session.get_session()
     async with session.create_client('sqs', 'us-east-1') as sqs:
         await sqs.create_queue(
-            QueueName='core.fifo', Attributes={'FifoQueue': 'true'}
+            QueueName='core.fifo',
+            Attributes={
+                'FifoQueue': 'true',
+                'ContentBasedDeduplication': 'true',
+            },
         )
         resp = await sqs.get_queue_url(QueueName='core.fifo')
         sqs.send_message = partial(sqs.send_message, QueueUrl=resp['QueueUrl'])

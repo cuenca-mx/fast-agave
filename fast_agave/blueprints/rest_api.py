@@ -1,5 +1,5 @@
 import mimetypes
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from urllib.parse import urlencode
 
 from cuenca_validations.types import QueryParams
@@ -7,8 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Request, status
 from fastapi.responses import JSONResponse as Response
 from fastapi.responses import StreamingResponse
 from mongoengine import DoesNotExist, Q
-from pydantic import ValidationError
-from pydantic.main import BaseConfig, BaseModel
+from pydantic import BaseModel, Field, ValidationError
 from starlette_context import context
 
 from ..exc import NotFoundError, UnprocessableEntity
@@ -231,7 +230,7 @@ class RestApiBlueprint(APIRouter):
                         file,
                         media_type=mimetype,
                         headers={
-                            'Content-Disposition': f'attachment; filename={filename}'
+                            'Content-Disposition': f'attachment; filename={filename}'  # noqa: E702
                         },
                     )
                 elif hasattr(cls, 'retrieve'):
@@ -255,30 +254,25 @@ class RestApiBlueprint(APIRouter):
                 return cls
 
             query_description = (
-                f'Make queries in resource {cls.__name__} and filter the result using query parameters.  \n'
-                f'The items are paginated, to iterate over them use the `next_page_uri` included in response.  \n'
-                f'If you need only a counter not the data send value `true` in `count` param.'
+                f"Make queries in resource {cls.__name__} and filter the result using query parameters.  \n"
+                f"The items are paginated, to iterate over them use the 'next_page_uri' included in response.  \n"
+                f"If you need only a counter not the data send value 'true' in 'count' param."
             )
 
             # Build dynamically types for query response
             class QueryResponse(BaseModel):
-                items: Optional[List[response_model]] = []
-                next_page_uri: Optional[str] = None
-                count: Optional[int] = None
-
-                class Config(BaseConfig):
-                    fields = {
-                        'items': {
-                            'description': f'List of {cls.__name__} that match with query filters'
-                        },
-                        'next_page_uri': {
-                            'description': 'URL to fetch the next page of results'
-                        },
-                        'count': {
-                            'description': f'Counter of {cls.__name__} objects that match with query filters.  \n'
-                            f'Included in response only if `count` param was `true`'
-                        },
-                    }
+                items: Optional[list[response_model]] = Field(
+                    [],
+                    description=f'List of {cls.__name__} that match with query filters',
+                )
+                next_page_uri: Optional[str] = Field(
+                    None, description='URL to fetch the next page of results'
+                )
+                count: Optional[int] = Field(
+                    None,
+                    description=f'Counter of {cls.__name__} objects that match with query filters.  \n'
+                    'If you need only a counter not the data send value `true` in `count` param.',
+                )
 
             QueryResponse.__name__ = f'QueryResponse{cls.__name__}'
 
@@ -369,7 +363,7 @@ class RestApiBlueprint(APIRouter):
                 next_page_uri: Optional[str] = None
                 if wants_more and has_more:
                     query.created_before = item_dicts[-1]['created_at']
-                    params = query.dict()
+                    params = query.model_dump()
                     if self.user_id_filter_required():
                         params.pop('user_id')
                     if self.platform_id_filter_required():
@@ -382,7 +376,7 @@ class RestApiBlueprint(APIRouter):
         return wrapper_resource_class
 
 
-def json_openapi(code: int, description, samples: List[Dict]) -> dict:
+def json_openapi(code: int, description, samples: list[dict]) -> dict:
     examples = {f'example_{i}': ex for i, ex in enumerate(samples)}
     return {
         code: {

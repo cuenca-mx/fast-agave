@@ -19,8 +19,7 @@ class TestResource:
 
 
 def test_copy_properties_from() -> None:
-    def retrieve():
-        ...
+    def retrieve(): ...  # noqa: E704
 
     assert not hasattr(retrieve, 'i_am_test')
     retrieve = copy_attributes(TestResource)(retrieve)

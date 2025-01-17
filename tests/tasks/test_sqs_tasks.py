@@ -2,11 +2,10 @@ import asyncio
 import datetime as dt
 import json
 import uuid
-from typing import Dict, Union
+from typing import Union
 from unittest.mock import AsyncMock, call, patch
 
 import aiobotocore.client
-import pytest
 from aiobotocore.httpsession import HTTPClientError
 from pydantic import BaseModel
 
@@ -20,7 +19,6 @@ from fast_agave.tasks.sqs_tasks import (
 CORE_QUEUE_REGION = 'us-east-1'
 
 
-@pytest.mark.asyncio
 async def test_execute_tasks(sqs_client) -> None:
     """
     Happy path: Se obtiene el mensaje y se ejecuta el task exitosamente.
@@ -35,7 +33,7 @@ async def test_execute_tasks(sqs_client) -> None:
 
     async_mock_function = AsyncMock()
 
-    async def my_task(data: Dict) -> None:
+    async def my_task(data: dict) -> None:
         await async_mock_function(data)
 
     await task(
@@ -52,7 +50,6 @@ async def test_execute_tasks(sqs_client) -> None:
     assert len(BACKGROUND_TASKS) == 0
 
 
-@pytest.mark.asyncio
 async def test_execute_tasks_with_validator(sqs_client) -> None:
     class Validator(BaseModel):
         id: str
@@ -94,7 +91,6 @@ async def test_execute_tasks_with_validator(sqs_client) -> None:
     assert len(BACKGROUND_TASKS) == 0
 
 
-@pytest.mark.asyncio
 async def test_execute_tasks_with_union_validator(sqs_client) -> None:
     class User(BaseModel):
         id: str
@@ -108,7 +104,7 @@ async def test_execute_tasks_with_union_validator(sqs_client) -> None:
     async_mock_function = AsyncMock(return_value=None)
 
     async def my_task(data: Union[User, Company]) -> None:
-        await async_mock_function(data)
+        await async_mock_function(data.model_dump())
 
     task_params = dict(
         queue_url=sqs_client.queue_url,
@@ -146,14 +142,13 @@ async def test_execute_tasks_with_union_validator(sqs_client) -> None:
     assert len(BACKGROUND_TASKS) == 0
 
 
-@pytest.mark.asyncio
 async def test_not_execute_tasks(sqs_client) -> None:
     """
     Este caso es cuando el queue está vacío. No hay nada que ejecutar
     """
     async_mock_function = AsyncMock()
 
-    async def my_task(data: Dict) -> None:
+    async def my_task(data: dict) -> None:
         await async_mock_function(data)
 
     # No escribimos un mensaje en el queue
@@ -169,7 +164,6 @@ async def test_not_execute_tasks(sqs_client) -> None:
     assert len(BACKGROUND_TASKS) == 0
 
 
-@pytest.mark.asyncio
 async def test_http_client_error_tasks(sqs_client) -> None:
     """
     Este test prueba el caso cuando hay un error de conexión al intentar
@@ -205,7 +199,7 @@ async def test_http_client_error_tasks(sqs_client) -> None:
 
     async_mock_function = AsyncMock(return_value=None)
 
-    async def my_task(data: Dict) -> None:
+    async def my_task(data: dict) -> None:
         await async_mock_function(data)
 
     with patch(
@@ -221,7 +215,6 @@ async def test_http_client_error_tasks(sqs_client) -> None:
         async_mock_function.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_retry_tasks_default_max_retries(sqs_client) -> None:
     """
     Este test prueba la lógica de reintentos con la configuración default,
@@ -242,7 +235,7 @@ async def test_retry_tasks_default_max_retries(sqs_client) -> None:
 
     async_mock_function = AsyncMock(side_effect=RetryTask)
 
-    async def my_task(data: Dict) -> None:
+    async def my_task(data: dict) -> None:
         await async_mock_function(data)
 
     await task(
@@ -260,7 +253,6 @@ async def test_retry_tasks_default_max_retries(sqs_client) -> None:
     assert 'Messages' not in resp
 
 
-@pytest.mark.asyncio
 async def test_retry_tasks_custom_max_retries(sqs_client) -> None:
     """
     Este test prueba la lógica de reintentos con la configuración default,
@@ -277,13 +269,13 @@ async def test_retry_tasks_custom_max_retries(sqs_client) -> None:
 
     async_mock_function = AsyncMock(side_effect=RetryTask)
 
-    async def my_task(data: Dict) -> None:
+    async def my_task(data: dict) -> None:
         await async_mock_function(data)
 
     await task(
         queue_url=sqs_client.queue_url,
         region_name=CORE_QUEUE_REGION,
-        wait_time_seconds=1,
+        wait_time_seconds=2,
         visibility_timeout=1,
         max_retries=3,
     )(my_task)()
@@ -297,7 +289,6 @@ async def test_retry_tasks_custom_max_retries(sqs_client) -> None:
     assert len(BACKGROUND_TASKS) == 0
 
 
-@pytest.mark.asyncio
 async def test_does_not_retry_on_unhandled_exceptions(sqs_client) -> None:
     """
     Este caso prueba que las excepciones no controladas no se reintentan por
@@ -316,7 +307,7 @@ async def test_does_not_retry_on_unhandled_exceptions(sqs_client) -> None:
         side_effect=Exception('something went wrong :(')
     )
 
-    async def my_task(data: Dict) -> None:
+    async def my_task(data: dict) -> None:
         await async_mock_function(data)
 
     await task(
@@ -335,7 +326,6 @@ async def test_does_not_retry_on_unhandled_exceptions(sqs_client) -> None:
     assert len(BACKGROUND_TASKS) == 0
 
 
-@pytest.mark.asyncio
 async def test_retry_tasks_with_countdown(sqs_client) -> None:
     """
     Este test prueba la lógica de reintentos con un countdown,
@@ -359,7 +349,7 @@ async def test_retry_tasks_with_countdown(sqs_client) -> None:
 
     async_mock_function = AsyncMock(side_effect=RetryTask(countdown=2))
 
-    async def countdown_tester(data: Dict):
+    async def countdown_tester(data: dict):
         await async_mock_function(data, dt.datetime.now())
 
     await task(
@@ -376,7 +366,6 @@ async def test_retry_tasks_with_countdown(sqs_client) -> None:
     assert 'Messages' not in resp
 
 
-@pytest.mark.asyncio
 async def test_concurrency_controller(
     sqs_client,
 ) -> None:
@@ -390,8 +379,8 @@ async def test_concurrency_controller(
 
     async_mock_function = AsyncMock()
 
-    async def task_counter(data: Dict) -> None:
-        await asyncio.sleep(1)
+    async def task_counter(data: dict) -> None:
+        await asyncio.sleep(2)
         running_tasks = len(await get_running_fast_agave_tasks())
         await async_mock_function(running_tasks)
 
@@ -406,3 +395,35 @@ async def test_concurrency_controller(
 
     running_tasks = [call[0] for call, _ in async_mock_function.call_args_list]
     assert max(running_tasks) == 2
+
+
+async def test_invalid_json_message(sqs_client) -> None:
+    """
+    Este test verifica que los mensajes con JSON inválido son ignorados
+    y el mensaje es eliminado del queue sin ejecutar el task
+    """
+    # Enviamos un mensaje con JSON inválido
+    await sqs_client.send_message(
+        MessageBody='{invalid_json',
+        MessageGroupId='1234',
+    )
+
+    async_mock_function = AsyncMock()
+
+    async def my_task(data: dict) -> None:
+        await async_mock_function(data)
+
+    await task(
+        queue_url=sqs_client.queue_url,
+        region_name=CORE_QUEUE_REGION,
+        wait_time_seconds=1,
+        visibility_timeout=1,
+    )(my_task)()
+
+    # Verificamos que el task nunca fue ejecutado
+    async_mock_function.assert_not_called()
+
+    # Verificamos que el mensaje fue eliminado del queue
+    resp = await sqs_client.receive_message()
+    assert 'Messages' not in resp
+    assert len(BACKGROUND_TASKS) == 0
