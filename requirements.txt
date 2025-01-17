@@ -1,5 +1,5 @@
 aiobotocore==2.17.0
-cuenca-validations==2.0.0.dev14
+cuenca-validations==2.0.0
 fastapi==0.115.6
 mongoengine-plus==1.0.0
 python-multipart==0.0.20
