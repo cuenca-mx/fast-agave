@@ -1,10 +1,11 @@
 import asyncio
 import json
 import os
+from contextlib import contextmanager
 from functools import wraps
 from itertools import count
 from json import JSONDecodeError
-from typing import AsyncGenerator, Callable, Coroutine
+from typing import AsyncGenerator, Callable, ContextManager, Coroutine, Optional
 
 from aiobotocore.httpsession import HTTPClientError
 from aiobotocore.session import get_session
@@ -12,7 +13,34 @@ from pydantic import validate_arguments
 
 from ..exc import RetryTask
 
-AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', '')
+AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION", "")
+AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL")
+
+
+@contextmanager
+def _noop_wrapper(task_name: str):
+    """
+    No-operation context manager that does nothing.
+    This wrapper is used as a placeholder when telemetry 
+    or tracing is disabled.
+
+    For instance, to use newrelic agent:
+
+    import newrelic.agent
+    from functools import partial
+
+    def newrelic_wrapper(task_name: str):
+        return newrelic.agent.BackgroundTask(
+            newrelic.agent.application(), 
+            name=task_name, 
+            group="SQS/Tasks"
+        )
+
+    @task(queue_url=QUEUE_URL, task_wrapper=newrelic_wrapper)
+        async def your_task(data: YourModel) -> None:
+    """
+    yield
+
 
 BACKGROUND_TASKS = set()
 
@@ -25,24 +53,29 @@ async def run_task(
     receipt_handle: str,
     message_receive_count: int,
     max_retries: int,
+    task_wrapper: Callable[[str], ContextManager] = _noop_wrapper,
 ) -> None:
     delete_message = True
-    try:
-        await task_func(body)
-    except RetryTask as retry:
-        delete_message = message_receive_count >= max_retries + 1
-        if not delete_message and retry.countdown and retry.countdown > 0:
-            await sqs.change_message_visibility(
-                QueueUrl=queue_url,
-                ReceiptHandle=receipt_handle,
-                VisibilityTimeout=retry.countdown,
-            )
-    finally:
-        if delete_message:
-            await sqs.delete_message(
-                QueueUrl=queue_url,
-                ReceiptHandle=receipt_handle,
-            )
+
+    task_name = getattr(task_func, "__wrapped__", task_func).__name__
+
+    with task_wrapper(task_name):
+        try:
+            await task_func(body)
+        except RetryTask as retry:
+            delete_message = message_receive_count >= max_retries + 1
+            if not delete_message and retry.countdown and retry.countdown > 0:
+                await sqs.change_message_visibility(
+                    QueueUrl=queue_url,
+                    ReceiptHandle=receipt_handle,
+                    VisibilityTimeout=retry.countdown,
+                )
+        finally:
+            if delete_message:
+                await sqs.delete_message(
+                    QueueUrl=queue_url,
+                    ReceiptHandle=receipt_handle,
+                )
 
 
 async def message_consumer(
@@ -82,10 +115,12 @@ async def get_running_fast_agave_tasks():
 def task(
     queue_url: str,
     region_name: str = AWS_DEFAULT_REGION,
+    endpoint_url: Optional[str] = AWS_ENDPOINT_URL,
     wait_time_seconds: int = 15,
     visibility_timeout: int = 3600,
     max_retries: int = 1,
     max_concurrent_tasks: int = 5,
+    task_wrapper: Callable[[str], ContextManager] = _noop_wrapper,
 ):
     def task_builder(task_func: Callable):
         @wraps(task_func)
@@ -108,7 +143,9 @@ def task(
 
             task_with_validators = validate_arguments(task_func)
 
-            async with session.create_client('sqs', region_name) as sqs:
+            async with session.create_client(
+                "sqs", region_name, endpoint_url=endpoint_url
+            ) as sqs:
                 async for message in message_consumer(
                     queue_url,
                     wait_time_seconds,
@@ -134,6 +171,7 @@ def task(
                                 message['ReceiptHandle'],
                                 message_receive_count,
                                 max_retries,
+                                task_wrapper,
                             ),
                         ),
                         name='fast-agave-task',
