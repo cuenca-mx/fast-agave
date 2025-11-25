@@ -12,6 +12,7 @@ from types_aiobotocore_sqs import SQSClient
 class SqsClient:
     queue_url: str
     region_name: str
+    endpoint_url: Optional[str] = None
     _sqs: SQSClient = field(init=False)
     _background_tasks: set = field(init=False)
 
@@ -28,7 +29,9 @@ class SqsClient:
 
     async def start(self):
         session = get_session()
-        context = session.create_client('sqs', self.region_name)
+        context = session.create_client(
+            'sqs', self.region_name, endpoint_url=self.endpoint_url
+        )
         self._background_tasks = set()
         self._sqs = await context.__aenter__()
 
